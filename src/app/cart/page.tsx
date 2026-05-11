@@ -69,7 +69,11 @@ export default function CartPage() {
                                                 <div className='flex gap-6'>
                                                     {/* Product Image */}
                                                     <div className='w-24 h-24 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0'>
-                                                        <Package className='w-12 h-12 text-neutral-600' />
+                                                        {item.image ? (
+                                                            <img src={item.image} alt={item.name} className='object-cover w-full h-full rounded-lg' />
+                                                        ) : (
+                                                            <Package className='w-12 h-12 text-neutral-600' />
+                                                        )}
                                                     </div>
 
                                                     {/* Product Info */}
@@ -77,7 +81,7 @@ export default function CartPage() {
                                                         <div className='flex justify-between items-start mb-2'>
                                                             <div>
                                                                 <div className='text-xs text-violet-400 mb-1'>{item.platform}</div>
-                                                                <h3 className='font-medium text-white text-lg'>{item.title}</h3>
+                                                                <h3 className='font-medium text-white text-lg'>{item.name}</h3>
                                                             </div>
                                                             <button
                                                                 onClick={() => removeItem(item.id)}
@@ -93,7 +97,7 @@ export default function CartPage() {
                                                                 <Button
                                                                     variant='outline'
                                                                     size='sm'
-                                                                    onClick={() => updateQuantity(item.id, -1)}
+                                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                                     className='w-8 h-8 p-0 border-neutral-700 hover:bg-neutral-800'
                                                                 >
                                                                     <Minus className='w-4 h-4' />
@@ -104,7 +108,7 @@ export default function CartPage() {
                                                                 <Button
                                                                     variant='outline'
                                                                     size='sm'
-                                                                    onClick={() => updateQuantity(item.id, 1)}
+                                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                                     className='w-8 h-8 p-0 border-neutral-700 hover:bg-neutral-800'
                                                                 >
                                                                     <Plus className='w-4 h-4' />
@@ -114,13 +118,8 @@ export default function CartPage() {
                                                             {/* Price */}
                                                             <div className='text-right'>
                                                                 <span className='text-2xl font-bold text-white'>
-                                                                    ${(item.price * item.quantity).toFixed(2)}
+                                                                    R$ {(item.price * item.quantity).toFixed(2)}
                                                                 </span>
-                                                                {item.originalPrice && (
-                                                                    <div className='text-sm text-neutral-500 line-through'>
-                                                                        ${(item.originalPrice * item.quantity).toFixed(2)}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -143,7 +142,7 @@ export default function CartPage() {
                                             <div className='space-y-3 mb-6'>
                                                 <div className='flex justify-between text-neutral-400'>
                                                     <span>Subtotal</span>
-                                                    <span>${subtotal.toFixed(2)}</span>
+                                                    <span>R$ {subtotal.toFixed(2)}</span>
                                                 </div>
                                                 <div className='flex justify-between text-neutral-400'>
                                                     <span>Delivery</span>
@@ -152,7 +151,7 @@ export default function CartPage() {
                                                 <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                                     <span className='font-semibold text-white'>Total</span>
                                                     <span className='text-2xl font-bold text-white'>
-                                                        ${total.toFixed(2)}
+                                                        R$ {total.toFixed(2)}
                                                     </span>
                                                 </div>
                                             </div>

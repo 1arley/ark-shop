@@ -1,61 +1,131 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
     CheckCircle2,
-    CreditCard,
     Shield,
     Package,
+    Loader2,
+    Copy,
+    QrCode,
+    AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { useCart } from '@/hooks/use-cart'
+import { useAuth } from '@/hooks/use-auth'
+import { apiClient } from '@/services/api'
+import type { Order, Payment } from '@/types/api'
 
 export default function CheckoutPage() {
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card')
-    const [processing, setProcessing] = useState(false)
-    const [completed, setCompleted] = useState(false)
+    const router = useRouter()
+    const { items: cartItems, total, clearCart } = useCart()
+    const { isAuthenticated } = useAuth()
 
-    const handlePayment = async () => {
+    const [processing, setProcessing] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [order, setOrder] = useState<Order | null>(null)
+    const [payment, setPayment] = useState<Payment | null>(null)
+    const [completed, setCompleted] = useState(false)
+    const [copied, setCopied] = useState(false)
+    const [pollingPayment, setPollingPayment] = useState(false)
+
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!isAuthenticated) {
+            router.push('/login?redirect=/checkout')
+        }
+    }, [isAuthenticated, router])
+
+    // Redirect to cart if empty
+    useEffect(() => {
+        if (cartItems.length === 0 && !order) {
+            router.push('/cart')
+        }
+    }, [cartItems.length, order, router])
+
+    // Poll payment status
+    useEffect(() => {
+        if (!payment || completed || !pollingPayment) return
+
+        const interval = setInterval(async () => {
+            try {
+                const response = await apiClient.payments.getByOrder(payment.orderId)
+                const updatedPayment = response.data
+                if (updatedPayment.status === 'APPROVED') {
+                    setPayment(updatedPayment)
+                    setCompleted(true)
+                    setPollingPayment(false)
+                    clearCart()
+                } else if (updatedPayment.status === 'REJECTED' || updatedPayment.status === 'CANCELLED') {
+                    setPayment(updatedPayment)
+                    setPollingPayment(false)
+                    setError('Payment was rejected. Please try again.')
+                }
+            } catch {
+                // continue polling
+            }
+        }, 5000) // Poll every 5 seconds
+
+        return () => clearInterval(interval)
+    }, [payment, completed, pollingPayment, clearCart])
+
+    const handleCreateOrder = async () => {
+        if (cartItems.length === 0) return
+
         setProcessing(true)
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        setProcessing(false)
-        setCompleted(true)
+        setError(null)
+
+        try {
+            // 1. Create order
+            const orderResponse = await apiClient.orders.create({
+                items: cartItems.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
+            })
+            const createdOrder = orderResponse.data
+            setOrder(createdOrder)
+
+            // 2. Create PIX payment
+            const paymentResponse = await apiClient.payments.create(createdOrder.id, {
+                amount: createdOrder.totalAmount,
+                provider: 'MERCADO_PAGO',
+                method: 'PIX',
+            })
+            setPayment(paymentResponse.data)
+            setPollingPayment(true)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to create order'
+            setError(message)
+        } finally {
+            setProcessing(false)
+        }
     }
 
-    const cartItems = [
-        {
-            id: 1,
-            title: 'Steam Gift Card $50',
-            price: 50.0,
-            originalPrice: 55.0,
-            quantity: 1,
-            platform: 'Steam',
-        },
-        {
-            id: 2,
-            title: 'Microsoft 365 Personal (1 Year)',
-            price: 69.99,
-            originalPrice: 99.99,
-            quantity: 1,
-            platform: 'Microsoft',
-        },
-    ]
+    const handleCopyPixCode = async () => {
+        if (!payment?.pixCopyPaste) return
+        try {
+            await navigator.clipboard.writeText(payment.pixCopyPaste)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 3000)
+        } catch {
+            // fallback
+        }
+    }
 
     const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-    const tax = subtotal * 0.08
-    const total = subtotal + tax
 
-    if (completed) {
+    // --- Completed State ---
+    if (completed && order) {
         return (
             <div className='min-h-screen bg-neutral-950'>
-<Header />
-
+                <Header />
                 <section className='relative pt-24 pb-12'>
                     <div className='max-w-2xl mx-auto px-4 sm:px-6 lg:px-8'>
                         <motion.div
@@ -68,18 +138,18 @@ export default function CheckoutPage() {
                                 <CheckCircle2 className='w-12 h-12 text-emerald-500' />
                             </div>
                             <h1 className='text-3xl font-semibold text-white mb-4'>
-                                Order Confirmed!
+                                Payment Confirmed!
                             </h1>
                             <p className='text-neutral-400 mb-8'>
-                                Your digital keys have been sent to your email.
+                                Your digital keys will be delivered shortly.
                             </p>
 
                             <Card className='bg-neutral-900/50 border-neutral-800 mb-8'>
                                 <CardContent className='p-6'>
                                     <div className='space-y-4'>
                                         <div className='flex justify-between items-center'>
-                                            <span className='text-neutral-400'>Order Number</span>
-                                            <span className='text-white font-mono'>ARK-2025-78945</span>
+                                            <span className='text-neutral-400'>Order ID</span>
+                                            <span className='text-white font-mono text-sm'>{order.id.slice(0, 8).toUpperCase()}</span>
                                         </div>
                                         <div className='flex justify-between items-center'>
                                             <span className='text-neutral-400'>Delivery Method</span>
@@ -88,7 +158,7 @@ export default function CheckoutPage() {
                                         <div className='border-t border-neutral-800 pt-4'>
                                             <div className='flex justify-between items-center'>
                                                 <span className='text-neutral-400'>Total Paid</span>
-                                                <span className='text-2xl font-bold text-white'>${total.toFixed(2)}</span>
+                                                <span className='text-2xl font-bold text-white'>R$ {order.totalAmount.toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -110,15 +180,114 @@ export default function CheckoutPage() {
                         </motion.div>
                     </div>
                 </section>
-
                 <Footer />
             </div>
         )
     }
 
-  return (
-    <div className='min-h-screen bg-neutral-950'>
-      <Header />
+    // --- PIX Payment Pending State ---
+    if (payment && !completed) {
+        return (
+            <div className='min-h-screen bg-neutral-950'>
+                <Header />
+                <section className='relative pt-24 pb-12'>
+                    <div className='max-w-2xl mx-auto px-4 sm:px-6 lg:px-8'>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className='text-center'
+                        >
+                            <div className='w-20 h-20 bg-violet-600/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-violet-500/30'>
+                                <QrCode className='w-12 h-12 text-violet-400' />
+                            </div>
+                            <h1 className='text-3xl font-semibold text-white mb-2'>
+                                Pay with PIX
+                            </h1>
+                            <p className='text-neutral-400 mb-8'>
+                                Scan the QR code or copy the PIX code below
+                            </p>
+
+                            {error && (
+                                <div className='p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 mb-6 flex items-center gap-3'>
+                                    <AlertCircle className='w-5 h-5 flex-shrink-0' />
+                                    {error}
+                                </div>
+                            )}
+
+                            <Card className='bg-neutral-900/50 border-neutral-800 mb-6'>
+                                <CardContent className='p-8'>
+                                    {/* QR Code */}
+                                    {payment.pixQrCode && (
+                                        <div className='mb-6'>
+                                            <div className='bg-white p-4 rounded-xl inline-block mb-4'>
+                                                <img
+                                                    src={`data:image/png;base64,${payment.pixQrCode}`}
+                                                    alt='PIX QR Code'
+                                                    className='w-48 h-48'
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* PIX Copy-Paste */}
+                                    {payment.pixCopyPaste && (
+                                        <div className='space-y-3'>
+                                            <p className='text-sm text-neutral-400'>Or copy the PIX code:</p>
+                                            <div className='flex gap-2'>
+                                                <div className='flex-1 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-left'>
+                                                    <p className='text-xs text-neutral-300 font-mono break-all line-clamp-2'>
+                                                        {payment.pixCopyPaste}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant='outline'
+                                                    className='border-neutral-700 hover:bg-neutral-800 flex-shrink-0'
+                                                    onClick={handleCopyPixCode}
+                                                >
+                                                    {copied ? (
+                                                        <CheckCircle2 className='w-4 h-4 text-emerald-400' />
+                                                    ) : (
+                                                        <Copy className='w-4 h-4' />
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Amount */}
+                                    <div className='mt-6 pt-6 border-t border-neutral-800'>
+                                        <div className='flex justify-between items-center'>
+                                            <span className='text-neutral-400'>Amount</span>
+                                            <span className='text-2xl font-bold text-white'>
+                                                R$ {payment.amount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Waiting indicator */}
+                            <div className='flex items-center justify-center gap-3 text-neutral-400 mb-4'>
+                                <Loader2 className='w-5 h-5 animate-spin' />
+                                <span>Waiting for payment confirmation...</span>
+                            </div>
+
+                            <p className='text-xs text-neutral-500'>
+                                The page will update automatically once payment is confirmed
+                            </p>
+                        </motion.div>
+                    </div>
+                </section>
+                <Footer />
+            </div>
+        )
+    }
+
+    // --- Checkout Form (Pre-payment) ---
+    return (
+        <div className='min-h-screen bg-neutral-950'>
+            <Header />
 
             {/* Header */}
             <section className='relative py-12 bg-neutral-900 border-b border-neutral-800'>
@@ -132,7 +301,7 @@ export default function CheckoutPage() {
                         <h1 className='text-3xl md:text-4xl font-semibold text-white mb-2'>
                             Checkout
                         </h1>
-                        <p className='text-neutral-400'>Complete your purchase securely</p>
+                        <p className='text-neutral-400'>Complete your purchase with PIX</p>
                     </motion.div>
                 </div>
             </section>
@@ -141,9 +310,8 @@ export default function CheckoutPage() {
             <section className='py-12'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                     <div className='grid lg:grid-cols-3 gap-8'>
-                        {/* Main Form */}
+                        {/* Payment Info */}
                         <div className='lg:col-span-2 space-y-6'>
-                            {/* Contact Information */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -152,104 +320,28 @@ export default function CheckoutPage() {
                                 <Card className='bg-neutral-900/50 border-neutral-800'>
                                     <CardContent className='p-6'>
                                         <h3 className='text-lg font-semibold text-white mb-4'>
-                                            Contact Information
-                                        </h3>
-                                        <div className='grid sm:grid-cols-2 gap-4'>
-                                            <div>
-                                                <Label htmlFor='email' className='text-neutral-300'>Email Address</Label>
-                                                <Input
-                                                    id='email'
-                                                    type='email'
-                                                    placeholder='you@example.com'
-                                                    className='mt-1 bg-neutral-800 border-neutral-700 text-white focus:border-violet-500 focus:ring-violet-500'
-                                                />
-                                            </div>
-                                        </div>
-                                        <p className='text-xs text-neutral-500 mt-3'>
-                                            Your digital keys will be sent to this email address
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-
-                            {/* Payment Method */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.1 }}
-                            >
-                                <Card className='bg-neutral-900/50 border-neutral-800'>
-                                    <CardContent className='p-6'>
-                                        <h3 className='text-lg font-semibold text-white mb-4'>
                                             Payment Method
                                         </h3>
-                                        <div className='grid sm:grid-cols-2 gap-4 mb-6'>
-                                            <button
-                                                onClick={() => setPaymentMethod('card')}
-                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                                    paymentMethod === 'card'
-                                                        ? 'border-violet-500 bg-violet-500/10'
-                                                        : 'border-neutral-700 hover:border-neutral-600'
-                                                }`}
-                                            >
-                                                <div className='flex items-center gap-3 mb-2'>
-                                                    <CreditCard className='w-5 h-5 text-neutral-400' />
-                                                    <span className='text-white font-medium'>Credit / Debit Card</span>
-                                                </div>
-                                                <span className='text-xs text-neutral-500'>Visa, Mastercard, Amex</span>
-                                            </button>
-                                            <button
-                                                onClick={() => setPaymentMethod('paypal')}
-                                                className={`p-4 rounded-lg border-2 transition-all text-left ${
-                                                    paymentMethod === 'paypal'
-                                                        ? 'border-violet-500 bg-violet-500/10'
-                                                        : 'border-neutral-700 hover:border-neutral-600'
-                                                }`}
-                                            >
-                                                <div className='flex items-center gap-3 mb-2'>
-                                                    <div className='w-5 h-5 bg-blue-600 rounded flex items-center justify-center text-xs text-white font-bold'>P</div>
-                                                    <span className='text-white font-medium'>PayPal</span>
-                                                </div>
-                                                <span className='text-xs text-neutral-500'>Pay with your PayPal account</span>
-                                            </button>
-                                        </div>
 
-                                        {paymentMethod === 'card' && (
-                                            <div className='space-y-4'>
-                                                <div>
-                                                    <Label htmlFor='card-number' className='text-neutral-300'>Card Number</Label>
-                                                    <Input
-                                                        id='card-number'
-                                                        type='text'
-                                                        placeholder='1234 5678 9012 3456'
-                                                        className='mt-1 bg-neutral-800 border-neutral-700 text-white focus:border-violet-500 focus:ring-violet-500'
-                                                    />
-                                                </div>
-                                                <div className='grid sm:grid-cols-2 gap-4'>
-                                                    <div>
-                                                        <Label htmlFor='expiry' className='text-neutral-300'>Expiry Date</Label>
-                                                        <Input
-                                                            id='expiry'
-                                                            type='text'
-                                                            placeholder='MM/YY'
-                                                            className='mt-1 bg-neutral-800 border-neutral-700 text-white focus:border-violet-500 focus:ring-violet-500'
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label htmlFor='cvv' className='text-neutral-300'>CVV</Label>
-                                                        <Input
-                                                            id='cvv'
-                                                            type='text'
-                                                            placeholder='123'
-                                                            className='mt-1 bg-neutral-800 border-neutral-700 text-white focus:border-violet-500 focus:ring-violet-500'
-                                                        />
-                                                    </div>
-                                                </div>
+                                        <div className='p-4 rounded-lg border-2 border-violet-500 bg-violet-500/10'>
+                                            <div className='flex items-center gap-3 mb-2'>
+                                                <QrCode className='w-5 h-5 text-violet-400' />
+                                                <span className='text-white font-medium'>PIX (Mercado Pago)</span>
                                             </div>
-                                        )}
+                                            <span className='text-xs text-neutral-400'>
+                                                Instant payment — your keys will be delivered immediately after confirmation
+                                            </span>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>
+
+                            {error && (
+                                <div className='p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex items-center gap-3'>
+                                    <AlertCircle className='w-5 h-5 flex-shrink-0' />
+                                    {error}
+                                </div>
+                            )}
 
                             {/* Security Notice */}
                             <motion.div
@@ -289,14 +381,11 @@ export default function CheckoutPage() {
                                                 </div>
                                                 <div className='flex-1'>
                                                     <div className='text-xs text-violet-400 mb-1'>{item.platform}</div>
-                                                    <h4 className='text-sm text-white font-medium line-clamp-2'>{item.title}</h4>
+                                                    <h4 className='text-sm text-white font-medium line-clamp-2'>{item.name}</h4>
                                                     <div className='text-xs text-neutral-500 mt-1'>Qty: {item.quantity}</div>
                                                 </div>
                                                 <div className='text-right'>
-                                                    <div className='text-white font-medium'>${item.price.toFixed(2)}</div>
-                                                    {item.originalPrice && (
-                                                        <div className='text-xs text-neutral-500 line-through'>${item.originalPrice.toFixed(2)}</div>
-                                                    )}
+                                                    <div className='text-white font-medium'>R$ {(item.price * item.quantity).toFixed(2)}</div>
                                                 </div>
                                             </div>
                                         ))}
@@ -306,11 +395,7 @@ export default function CheckoutPage() {
                                     <div className='space-y-3 mb-6'>
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Subtotal</span>
-                                            <span>${subtotal.toFixed(2)}</span>
-                                        </div>
-                                        <div className='flex justify-between text-neutral-400'>
-                                            <span>Tax (8%)</span>
-                                            <span>${tax.toFixed(2)}</span>
+                                            <span>R$ {subtotal.toFixed(2)}</span>
                                         </div>
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Delivery</span>
@@ -318,31 +403,31 @@ export default function CheckoutPage() {
                                         </div>
                                         <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                             <span className='font-semibold text-white'>Total</span>
-                                            <span className='text-2xl font-bold text-white'>${total.toFixed(2)}</span>
+                                            <span className='text-2xl font-bold text-white'>R$ {total.toFixed(2)}</span>
                                         </div>
                                     </div>
 
                                     <Button
-                                        onClick={handlePayment}
-                                        disabled={processing}
+                                        onClick={handleCreateOrder}
+                                        disabled={processing || cartItems.length === 0}
                                         className='w-full bg-white text-neutral-950 hover:bg-neutral-200 h-12 font-semibold'
                                     >
                                         {processing ? (
                                             <span className='flex items-center gap-2'>
-                                                <div className='w-4 h-4 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin' />
-                                                Processing...
+                                                <Loader2 className='w-4 h-4 animate-spin' />
+                                                Creating order...
                                             </span>
                                         ) : (
                                             <span className='flex items-center gap-2'>
-                                                <Shield className='w-4 h-4' />
-                                                Pay Securely
+                                                <QrCode className='w-4 h-4' />
+                                                Pay with PIX
                                             </span>
                                         )}
                                     </Button>
 
                                     <div className='flex items-center justify-center gap-2 mt-4 text-xs text-neutral-500'>
                                         <Shield className='w-3 h-3' />
-                                        <span>SSL Encrypted Payment</span>
+                                        <span>Encrypted Payment via Mercado Pago</span>
                                     </div>
                                 </CardContent>
                             </Card>

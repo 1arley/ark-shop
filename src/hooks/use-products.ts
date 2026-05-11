@@ -1,24 +1,14 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { apiClient } from '@/services/api'
+import type { Product, ProductListParams, PaginatedResponse } from '@/types/api'
 
-export interface Product {
-  id: number
-  title: string
-  price: number
-  originalPrice?: number
-  category: string
-  platform: string
-  rating: number
-  reviews: number
-  badge?: string | null
-  inStock: boolean
-  image?: string
-  description?: string
-}
+export type { Product } from '@/types/api'
 
 export interface ProductFilters {
   category?: string
+  categoryId?: string
   platform?: string
   minPrice?: number
   maxPrice?: number
@@ -30,47 +20,36 @@ export function useProducts(initialFilters?: ProductFilters) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [filters, setFilters] = useState<ProductFilters>(initialFilters || {})
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const fetchProducts = useCallback(async (_filters?: ProductFilters) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+  const fetchProducts = useCallback(async (params?: ProductListParams) => {
     try {
       setIsLoading(true)
       setError(null)
-      
-      // TODO: Replace with actual API call when backend is available
-      // const endpoint = new URL('/products', apiClient.baseURL)
-      // if (filters?.category) endpoint.searchParams.set('category', filters.category)
-      // const response = await apiClient.get<Product[]>(endpoint.toString())
-      // setProducts(response.data)
-      
-      // Simulated data for demo
-      const mockProducts: Product[] = [
-        {
-          id: 1,
-          title: 'Steam Gift Card $50',
-          price: 50.0,
-          originalPrice: 55.0,
-          category: 'Gift Cards',
-          platform: 'Steam',
-          rating: 4.8,
-          reviews: 2847,
-          badge: 'Featured',
-          inStock: true,
-        },
-        {
-          id: 2,
-          title: 'Microsoft 365 Personal (1 Year)',
-          price: 69.99,
-          originalPrice: 99.99,
-          category: 'Office Suites',
-          platform: 'Microsoft',
-          rating: 4.9,
-          reviews: 1923,
-          badge: 'Best Seller',
-          inStock: true,
-        },
-      ]
-      
-      setProducts(mockProducts)
+
+      const response = await apiClient.products.list({
+        page: params?.page || 1,
+        limit: params?.limit || 20,
+        search: params?.search,
+        isActive: true,
+        categoryId: params?.categoryId,
+      })
+
+      // Backend may return paginated or array
+      const data = response.data
+      if (Array.isArray(data)) {
+        setProducts(data)
+        setTotalProducts(data.length)
+        setTotalPages(1)
+      } else {
+        const paginated = data as PaginatedResponse<Product>
+        setProducts(paginated.data || [])
+        setTotalProducts(paginated.total || 0)
+        setCurrentPage(paginated.page || 1)
+        setTotalPages(paginated.totalPages || 1)
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch products'))
     } finally {
@@ -79,24 +58,16 @@ export function useProducts(initialFilters?: ProductFilters) {
   }, [])
 
   const filteredProducts = useMemo(() => {
+    // Client-side filtering is minimal — most filtering happens server-side.
+    // Only apply local filters that the API doesn't support.
     return products.filter((product) => {
-      if (filters.category && product.category !== filters.category) {
-        return false
-      }
-      if (filters.platform && product.platform !== filters.platform) {
-        return false
-      }
-      if (filters.minPrice && product.price < filters.minPrice) {
-        return false
-      }
-      if (filters.maxPrice && product.price > filters.maxPrice) {
-        return false
-      }
+      if (filters.minPrice && product.price < filters.minPrice) return false
+      if (filters.maxPrice && product.price > filters.maxPrice) return false
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
         return (
-          product.title.toLowerCase().includes(searchLower) ||
-          product.platform.toLowerCase().includes(searchLower)
+          product.name.toLowerCase().includes(searchLower) ||
+          (product.description || '').toLowerCase().includes(searchLower)
         )
       }
       return true
@@ -117,6 +88,9 @@ export function useProducts(initialFilters?: ProductFilters) {
     isLoading,
     error,
     filters,
+    totalProducts,
+    currentPage,
+    totalPages,
     fetchProducts,
     updateFilters,
     clearFilters,
