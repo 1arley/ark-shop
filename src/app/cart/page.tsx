@@ -1,56 +1,22 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ShoppingCart, Package, Plus, Minus, Trash2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useCart } from '@/hooks/use-cart'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
 export default function CartPage() {
-    const [cartItems, setCartItems] = useState([
-        {
-            id: 1,
-            title: 'Steam Gift Card $50',
-            price: 50.0,
-            originalPrice: 55.0,
-            platform: 'Steam',
-            quantity: 1,
-        },
-        {
-            id: 2,
-            title: 'Microsoft 365 Personal (1 Year)',
-            price: 69.99,
-            originalPrice: 99.99,
-            platform: 'Microsoft',
-            quantity: 1,
-        },
-    ] as { id: number; title: string; price: number; originalPrice: number; platform: string; quantity: number }[])
+  const { items: cartItems, removeItem, updateQuantity, total } = useCart()
 
-    const updateQuantity = (id: number, change: number) => {
-        setCartItems((items) =>
-            items
-                .map((item) =>
-                    item.id === id
-                        ? { ...item, quantity: Math.max(0, item.quantity + change) }
-                        : item
-                )
-                .filter((item) => item.quantity > 0)
-        )
-    }
-
-    const removeItem = (id: number) => {
-        setCartItems((items) => items.filter((item) => item.id !== id))
-    }
-
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    const total = subtotal
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
     return (
         <div className='min-h-screen bg-neutral-950'>
-            <Header cartCount={cartItems.length} />
+            <Header />
 
             {/* Header Section */}
             <section className='relative py-12 bg-neutral-900 border-b border-neutral-800'>
