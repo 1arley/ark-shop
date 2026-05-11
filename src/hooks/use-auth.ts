@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import type { User } from '@/stores/auth-store'
+import { apiClient } from '@/services/api'
 
 export function useAuth() {
   const {
@@ -12,73 +12,75 @@ export function useAuth() {
     isAuthenticated,
     setUser,
     setToken,
+    setRefreshToken,
     setLoading,
     logout: logoutStore,
   } = useAuthStore()
 
   const login = useCallback(
-    async (email: string, _password: string) => { // eslint-disable-line @typescript-eslint/no-unused-vars
+    async (email: string, password: string) => {
       try {
         setLoading(true)
-        // TODO: Replace with actual API call
-        // const response = await api.post('/auth/login', { email, password })
-        // setToken(response.data.token)
-        // setUser(response.data.user)
-        
-        // Simulated login for demo
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const mockUser: User = {
-          id: '1',
-          email,
-          name: email.split('@')[0],
-        }
-        setUser(mockUser)
-        
+        const response = await apiClient.auth.login({ email, password })
+        const { access_token, refresh_token, user: userData } = response.data
+
+        // Store tokens in both zustand and apiClient
+        setToken(access_token)
+        setRefreshToken(refresh_token)
+        apiClient.setToken(access_token)
+        apiClient.setRefreshToken(refresh_token)
+        setUser(userData)
+
         return { success: true }
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Login failed',
-        }
+        const message =
+          error instanceof Error ? error.message : 'Login failed'
+        return { success: false, error: message }
       } finally {
         setLoading(false)
       }
     },
-    [setLoading, setUser]
+    [setLoading, setUser, setToken, setRefreshToken]
   )
 
   const register = useCallback(
     async (email: string, password: string, name: string) => {
       try {
         setLoading(true)
-        // TODO: Replace with actual API call
-        // const response = await api.post('/auth/register', { email, password, name })
-        
-        // Simulated registration
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const mockUser: User = {
-          id: '1',
-          email,
-          name,
-        }
-        setUser(mockUser)
-        
+        const response = await apiClient.auth.register({ email, password, name })
+        const { access_token, refresh_token, user: userData } = response.data
+
+        setToken(access_token)
+        setRefreshToken(refresh_token)
+        apiClient.setToken(access_token)
+        apiClient.setRefreshToken(refresh_token)
+        setUser(userData)
+
         return { success: true }
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Registration failed',
-        }
+        const message =
+          error instanceof Error ? error.message : 'Registration failed'
+        return { success: false, error: message }
       } finally {
         setLoading(false)
       }
     },
-    [setLoading, setUser]
+    [setLoading, setUser, setToken, setRefreshToken]
   )
 
   const logout = useCallback(() => {
+    apiClient.clearAuth()
     logoutStore()
   }, [logoutStore])
+
+  // Sync token from store to apiClient on hydration
+  if (typeof window !== 'undefined' && token && !apiClient.getToken()) {
+    apiClient.setToken(token)
+  }
+  const refreshToken = useAuthStore.getState().refreshToken
+  if (typeof window !== 'undefined' && refreshToken && !apiClient.getRefreshToken()) {
+    apiClient.setRefreshToken(refreshToken)
+  }
 
   return {
     user,

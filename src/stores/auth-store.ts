@@ -1,20 +1,16 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-
-export interface User {
-  id: string
-  email: string
-  name: string
-  avatar?: string
-}
+import type { AuthUser } from '@/types/api'
 
 interface AuthState {
-  user: User | null
+  user: AuthUser | null
   token: string | null
+  refreshToken: string | null
   isLoading: boolean
   isAuthenticated: boolean
-  setUser: (user: User | null) => void
+  setUser: (user: AuthUser | null) => void
   setToken: (token: string | null) => void
+  setRefreshToken: (refreshToken: string | null) => void
   setLoading: (loading: boolean) => void
   logout: () => void
 }
@@ -26,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isLoading: true,
       isAuthenticated: false,
 
@@ -37,14 +34,20 @@ export const useAuthStore = create<AuthState>()(
         set({ token })
       },
 
+      setRefreshToken: (refreshToken) => {
+        set({ refreshToken })
+      },
+
       setLoading: (isLoading) => {
         set({ isLoading })
       },
 
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false })
+        set({ user: null, token: null, refreshToken: null, isAuthenticated: false })
         if (typeof window !== 'undefined') {
           localStorage.removeItem(storageKey)
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('auth_refresh_token')
         }
       },
     }),
@@ -54,8 +57,12 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }
   )
 )
+
+// Re-export for backwards compatibility
+export type { AuthUser as User } from '@/types/api'
