@@ -109,9 +109,9 @@ export default function Home() {
         },
     ]
 
-    return (
-        <div className='min-h-screen bg-neutral-950'>
-            <Header cartCount={0} />
+  return (
+    <div className='min-h-screen bg-neutral-950'>
+      <Header />
 
             {/* Hero Section */}
             <section className='relative pt-24 min-h-[85vh] flex items-center overflow-hidden'>

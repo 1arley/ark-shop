@@ -138,9 +138,9 @@ export default function ProductsPage() {
         return matchesSearch && matchesCategory
     })
 
-    return (
-        <div className='min-h-screen bg-neutral-950'>
-            <Header cartCount={0} />
+  return (
+    <div className='min-h-screen bg-neutral-950'>
+      <Header />
 
             {/* Hero Section */}
             <section className='relative py-20 bg-neutral-900 overflow-hidden'>

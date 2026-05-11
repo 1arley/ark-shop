@@ -54,7 +54,7 @@ export default function CheckoutPage() {
     if (completed) {
         return (
             <div className='min-h-screen bg-neutral-950'>
-                <Header cartCount={0} />
+<Header />
 
                 <section className='relative pt-24 pb-12'>
                     <div className='max-w-2xl mx-auto px-4 sm:px-6 lg:px-8'>
@@ -116,9 +116,9 @@ export default function CheckoutPage() {
         )
     }
 
-    return (
-        <div className='min-h-screen bg-neutral-950'>
-            <Header cartCount={2} />
+  return (
+    <div className='min-h-screen bg-neutral-950'>
+      <Header />
 
             {/* Header */}
             <section className='relative py-12 bg-neutral-900 border-b border-neutral-800'>
