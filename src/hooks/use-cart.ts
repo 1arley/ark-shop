@@ -3,6 +3,8 @@
 import { useCallback } from 'react'
 import { useCartStore } from '@/stores/cart-store'
 import type { CartItem } from '@/stores/cart-store'
+import { apiClient } from '@/services/api'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function useCart() {
   const {
@@ -11,34 +13,111 @@ export function useCart() {
     removeItem: removeItemFromStore,
     updateQuantity: updateQuantityInStore,
     clearCart: clearCartStore,
+    setItems,
     getItemCount,
     getTotal,
   } = useCartStore()
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  // Sync local cart to backend after login
+  const syncCartToServer = useCallback(async () => {
+    if (!isAuthenticated) return
+    try {
+      for (const item of items) {
+        await apiClient.cart.addItem(item.productId, item.quantity)
+      }
+      // Fetch the server cart to get the canonical state
+      const response = await apiClient.cart.get()
+      const serverItems: CartItem[] = response.data.items.map((ci) => ({
+        id: ci.product.id,
+        productId: ci.productId,
+        name: ci.product.name,
+        price: ci.product.price,
+        platform: ci.product.category?.name || '',
+        quantity: ci.quantity,
+        image: ci.product.imageUrl || undefined,
+      }))
+      setItems(serverItems)
+    } catch {
+      // If backend cart fails, keep local state
+    }
+  }, [isAuthenticated, items, setItems])
+
+  // Fetch cart from server (for authenticated users)
+  const fetchCart = useCallback(async () => {
+    if (!isAuthenticated) return
+    try {
+      const response = await apiClient.cart.get()
+      const serverItems: CartItem[] = response.data.items.map((ci) => ({
+        id: ci.product.id,
+        productId: ci.productId,
+        name: ci.product.name,
+        price: ci.product.price,
+        platform: ci.product.category?.name || '',
+        quantity: ci.quantity,
+        image: ci.product.imageUrl || undefined,
+      }))
+      setItems(serverItems)
+    } catch {
+      // Keep local state on error
+    }
+  }, [isAuthenticated, setItems])
+
   const addItem = useCallback(
-    (item: Omit<CartItem, 'quantity'>) => {
+    async (item: Omit<CartItem, 'quantity'>) => {
       addItemToStore(item)
+      if (isAuthenticated) {
+        try {
+          await apiClient.cart.addItem(item.productId, 1)
+        } catch {
+          // Local state already updated
+        }
+      }
     },
-    [addItemToStore]
+    [addItemToStore, isAuthenticated]
   )
 
   const removeItem = useCallback(
-    (id: number) => {
+    async (id: string) => {
+      const item = items.find((i) => i.id === id)
       removeItemFromStore(id)
+      if (isAuthenticated && item) {
+        try {
+          await apiClient.cart.removeItem(item.productId)
+        } catch {
+          // Local state already updated
+        }
+      }
     },
-    [removeItemFromStore]
+    [removeItemFromStore, isAuthenticated, items]
   )
 
   const updateQuantity = useCallback(
-    (id: number, quantity: number) => {
+    async (id: string, quantity: number) => {
+      const item = items.find((i) => i.id === id)
       updateQuantityInStore(id, quantity)
+      if (isAuthenticated && item) {
+        try {
+          await apiClient.cart.updateItem(item.productId, quantity)
+        } catch {
+          // Local state already updated
+        }
+      }
     },
-    [updateQuantityInStore]
+    [updateQuantityInStore, isAuthenticated, items]
   )
 
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
     clearCartStore()
-  }, [clearCartStore])
+    if (isAuthenticated) {
+      try {
+        await apiClient.cart.clear()
+      } catch {
+        // Local state already cleared
+      }
+    }
+  }, [clearCartStore, isAuthenticated])
 
   const itemCount = getItemCount()
   const total = getTotal()
@@ -49,6 +128,8 @@ export function useCart() {
     removeItem,
     updateQuantity,
     clearCart,
+    syncCartToServer,
+    fetchCart,
     itemCount,
     total,
   }
