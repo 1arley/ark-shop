@@ -54,11 +54,11 @@ export default function CategoriesPage() {
     }, [])
 
     const filteredCategories = selectedCategory
-        ? categories.filter((cat) => cat.name === selectedCategory)
+        ? categories.filter((cat) => cat.id === selectedCategory)
         : categories
 
     return (
-        <div className='min-h-screen'>
+        <div className='min-h-screen bg-neutral-950'>
             <Header />
 
             {/* Hero Section */}
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
                             <Button
                                 key={category.id}
                                 variant={selectedCategory === category.name ? 'default' : 'outline'}
-                                onClick={() => setSelectedCategory(selectedCategory === category.name ? null : category.name)}
+                                onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
                                 className={
                                     selectedCategory === category.name
                                         ? 'bg-indigo-600'

@@ -9,11 +9,14 @@ import { useCart } from '@/hooks/use-cart'
 import { formatPrice } from '@/lib/utils'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { useState, useEffect } from 'react'
 
 export default function CartPage() {
   const { items: cartItems, removeItem, updateQuantity, total } = useCart()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = mounted ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) : 0
 
     return (
         <div className='min-h-screen bg-neutral-950'>
@@ -152,7 +155,7 @@ export default function CartPage() {
                                                 <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                                     <span className='font-semibold text-white'>Total</span>
                                                     <span className='text-2xl font-bold text-white'>
-                                                        R$ {formatPrice(total)}
+                                                        R$ {mounted ? formatPrice(total) : '0.00'}
                                                     </span>
                                                 </div>
                                             </div>

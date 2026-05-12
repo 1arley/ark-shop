@@ -28,6 +28,9 @@ export default function CheckoutPage() {
     const { items: cartItems, total, clearCart } = useCart()
     const { isAuthenticated } = useAuth()
 
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => { setMounted(true) }, [])
+
     const [processing, setProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [order, setOrder] = useState<Order | null>(null)
@@ -35,6 +38,8 @@ export default function CheckoutPage() {
     const [completed, setCompleted] = useState(false)
     const [copied, setCopied] = useState(false)
     const [pollingPayment, setPollingPayment] = useState(false)
+    const [payerCpf, setPayerCpf] = useState('')
+    const [payerBirthDate, setPayerBirthDate] = useState('')
 
     // Redirect to login if not authenticated
     useEffect(() => {
@@ -95,9 +100,11 @@ export default function CheckoutPage() {
 
             // 2. Create PIX payment
             const paymentResponse = await apiClient.payments.create(createdOrder.id, {
-                amount: createdOrder.totalAmount,
+                amount: Number(createdOrder.total),
                 provider: 'MERCADO_PAGO',
                 method: 'PIX',
+                payerCpf: payerCpf.replace(/\D/g, '') || undefined,
+                payerBirthDate: payerBirthDate || undefined,
             })
             setPayment(paymentResponse.data)
             setPollingPayment(true)
@@ -109,9 +116,10 @@ export default function CheckoutPage() {
     }
 
     const handleCopyPixCode = async () => {
-        if (!payment?.pixCopyPaste) return
+        const pixText = payment?.pixCode || payment?.pixQrCode || ''
+        if (!pixText) return
         try {
-            await navigator.clipboard.writeText(payment.pixCopyPaste)
+            await navigator.clipboard.writeText(pixText)
             setCopied(true)
             setTimeout(() => setCopied(false), 3000)
         } catch {
@@ -119,7 +127,7 @@ export default function CheckoutPage() {
         }
     }
 
-    const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+    const subtotal = mounted ? cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0) : 0
 
     // --- Completed State ---
     if (completed && order) {
@@ -158,7 +166,7 @@ export default function CheckoutPage() {
                                         <div className='border-t border-neutral-800 pt-4'>
                                             <div className='flex justify-between items-center'>
                                                 <span className='text-neutral-400'>Total Paid</span>
-                                                <span className='text-2xl font-bold text-white'>R$ {formatPrice(order.totalAmount)}</span>
+                                                <span className='text-2xl font-bold text-white'>R$ {formatPrice(order.total)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -231,13 +239,13 @@ export default function CheckoutPage() {
                                     )}
 
                                     {/* PIX Copy-Paste */}
-                                    {payment.pixCopyPaste && (
+                                    {(payment.pixCode || payment.pixQrCode) && (
                                         <div className='space-y-3'>
                                             <p className='text-sm text-neutral-400'>Or copy the PIX code:</p>
                                             <div className='flex gap-2'>
                                                 <div className='flex-1 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-left'>
                                                     <p className='text-xs text-neutral-300 font-mono break-all line-clamp-2'>
-                                                        {payment.pixCopyPaste}
+                                                        {payment.pixCode || payment.pixQrCode}
                                                     </p>
                                                 </div>
                                                 <Button
@@ -391,6 +399,31 @@ export default function CheckoutPage() {
                                         ))}
                                     </div>
 
+                                    {/* Payer Info */}
+                                    <div className='border-t border-neutral-800 pt-4 mb-6 space-y-3'>
+                                        <h4 className='text-sm font-medium text-white'>Payer Information</h4>
+                                        <div>
+                                            <label className='block text-xs text-neutral-500 mb-1'>CPF</label>
+                                            <input
+                                                type='text'
+                                                value={payerCpf}
+                                                onChange={(e) => setPayerCpf(e.target.value)}
+                                                placeholder='000.000.000-00'
+                                                maxLength={14}
+                                                className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-violet-500/50 focus:outline-none'
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className='block text-xs text-neutral-500 mb-1'>Birth Date</label>
+                                            <input
+                                                type='date'
+                                                value={payerBirthDate}
+                                                onChange={(e) => setPayerBirthDate(e.target.value)}
+                                                className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:border-violet-500/50 focus:outline-none'
+                                            />
+                                        </div>
+                                    </div>
+
                                     {/* Totals */}
                                     <div className='space-y-3 mb-6'>
                                         <div className='flex justify-between text-neutral-400'>
@@ -403,7 +436,7 @@ export default function CheckoutPage() {
                                         </div>
                                         <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                             <span className='font-semibold text-white'>Total</span>
-                                            <span className='text-2xl font-bold text-white'>R$ {formatPrice(total)}</span>
+                                            <span className='text-2xl font-bold text-white'>R$ {mounted ? formatPrice(total) : '0.00'}</span>
                                         </div>
                                     </div>
 

@@ -7,7 +7,7 @@ import Footer from '@/components/layout/Footer'
 
 export default function AboutPage() {
     return (
-        <div className='min-h-screen'>
+        <div className='min-h-screen bg-neutral-950'>
             <Header />
 
             {/* Hero Section */}
