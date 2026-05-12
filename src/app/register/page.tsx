@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react'
@@ -10,13 +10,14 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { registerSchema, type RegisterFormData } from '@/lib/validations'
-import { GoogleIcon, GitHubIcon } from '@/components/icons'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register: registerUser, isLoading } = useAuth()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +40,7 @@ export default function RegisterPage() {
 
     const result = await registerUser(formData.email, formData.password, formData.name)
     if (result.success) {
-      router.push('/dashboard')
+      router.push(redirectTo)
     } else {
       setError(result.error || 'Registration failed')
     }
@@ -207,36 +208,6 @@ export default function RegisterPage() {
                   </Button>
                 </form>
 
-                {/* Divider */}
-                <div className='relative my-6'>
-                  <div className='absolute inset-0 flex items-center'>
-                    <div className='w-full border-t border-neutral-700' />
-                  </div>
-                  <div className='relative flex justify-center text-sm'>
-                    <span className='px-4 bg-neutral-900 text-neutral-500'>Or register with</span>
-                  </div>
-                </div>
-
-                {/* Social Register */}
-                <div className='grid grid-cols-2 gap-4'>
-                  <Button
-                    variant='outline'
-                    className='border-neutral-700 hover:bg-neutral-800 h-12'
-                    onClick={() => {}}
-                  >
-                    <GoogleIcon className='w-5 h-5 mr-2' />
-                    Google
-                  </Button>
-                  <Button
-                    variant='outline'
-                    className='border-neutral-700 hover:bg-neutral-800 h-12'
-                    onClick={() => {}}
-                  >
-                    <GitHubIcon className='w-5 h-5 mr-2' />
-                    GitHub
-                  </Button>
-                </div>
-
                 {/* Login Link */}
                 <p className='text-center text-sm text-neutral-400 mt-6'>
                   Already have an account?{' '}
@@ -252,5 +223,17 @@ export default function RegisterPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className='min-h-screen bg-neutral-950 flex items-center justify-center'>
+        <div className='w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin' />
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   )
 }

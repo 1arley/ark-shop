@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
@@ -10,13 +10,14 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/use-auth'
 import { loginSchema, type LoginFormData } from '@/lib/validations'
-import { GoogleIcon, GitHubIcon } from '@/components/icons'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, isLoading } = useAuth()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<LoginFormData>({
@@ -36,7 +37,7 @@ export default function LoginPage() {
 
     const result = await login(formData.email, formData.password)
     if (result.success) {
-      router.push('/dashboard')
+      router.push(redirectTo)
     } else {
       setError(result.error || 'Login failed')
     }
@@ -147,36 +148,6 @@ export default function LoginPage() {
                   </Button>
                 </form>
 
-                {/* Divider */}
-                <div className='relative my-6'>
-                  <div className='absolute inset-0 flex items-center'>
-                    <div className='w-full border-t border-neutral-700' />
-                  </div>
-                  <div className='relative flex justify-center text-sm'>
-                    <span className='px-4 bg-neutral-900 text-neutral-500'>Or continue with</span>
-                  </div>
-                </div>
-
-                {/* Social Login */}
-                <div className='grid grid-cols-2 gap-4'>
-                  <Button
-                    variant='outline'
-                    className='border-neutral-700 hover:bg-neutral-800 h-12 text-neutral-300'
-                    onClick={() => {}}
-                  >
-                    <GoogleIcon className='w-5 h-5 mr-2' />
-                    Google
-                  </Button>
-                  <Button
-                    variant='outline'
-                    className='border-neutral-700 hover:bg-neutral-800 h-12 text-neutral-300'
-                    onClick={() => {}}
-                  >
-                    <GitHubIcon className='w-5 h-5 mr-2' />
-                    GitHub
-                  </Button>
-                </div>
-
                 {/* Sign Up Link */}
                 <p className='text-center text-sm text-neutral-500 mt-6'>
                   Don&apos;t have an account?{' '}
@@ -192,5 +163,17 @@ export default function LoginPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className='min-h-screen bg-neutral-950 flex items-center justify-center'>
+        <div className='w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin' />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
