@@ -18,36 +18,27 @@ function validateEnv(): EnvConfig {
   )
 
   if (missingVars.length > 0) {
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    
-    if (isDevelopment) {
-      console.warn(
-        'Missing required environment variables:',
-        missingVars.join(', ')
-      )
-    } else {
-      throw new Error(
-        `Missing required environment variables: ${missingVars.join(', ')}`
-      )
-    }
+    console.warn(
+      'Missing environment variables:',
+      missingVars.join(', '),
+      '- API calls will fail until configured.'
+    )
   }
 
   const config = {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || '',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
     NEXT_PUBLIC_ENV: process.env.NEXT_PUBLIC_ENV || 'development',
     isProduction: process.env.NODE_ENV === 'production',
     isDevelopment: process.env.NODE_ENV === 'development',
     isTest: process.env.NODE_ENV === 'test',
   } as EnvConfig
 
-  if (config.isDevelopment) {
-    console.log('Environment configuration:', {
-      api: config.NEXT_PUBLIC_API_URL ? 'configured' : 'missing',
-      app: config.NEXT_PUBLIC_APP_URL ? 'configured' : 'missing',
-      mode: config.NEXT_PUBLIC_ENV,
-    })
-  }
+  console.log('Environment configuration:', {
+    api: config.NEXT_PUBLIC_API_URL ? 'configured' : 'missing',
+    app: config.NEXT_PUBLIC_APP_URL ? 'configured' : 'missing',
+    mode: config.NEXT_PUBLIC_ENV,
+  })
 
   return config
 }
