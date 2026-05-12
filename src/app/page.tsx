@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatPrice } from '@/lib/utils'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { apiClient } from '@/services/api'
@@ -48,6 +49,7 @@ export default function Home() {
     const [categories, setCategories] = useState<Category[]>([])
     const [isLoadingProducts, setIsLoadingProducts] = useState(true)
     const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+    const [justAdded, setJustAdded] = useState<string | null>(null)
     const { addItem } = useCart()
 
     useEffect(() => {
@@ -93,6 +95,8 @@ export default function Home() {
             platform: product.category?.name || '',
             image: product.imageUrl || undefined,
         })
+        setJustAdded(product.id)
+        setTimeout(() => setJustAdded(null), 1200)
     }
 
     const getCategoryDisplay = (index: number) => {
@@ -178,12 +182,16 @@ export default function Home() {
                                 transition={{ duration: 0.5, delay: 0.4 }}
                                 className='flex flex-col sm:flex-row gap-4'
                             >
-                                <Button size='lg' className='bg-white text-neutral-950 hover:bg-neutral-200 px-8 h-12 font-medium'>
-                                    <Link href='/products'>Shop Products</Link>
-                                </Button>
-                                <Button size='lg' variant='outline' className='border-neutral-700 hover:bg-neutral-800 text-neutral-300 px-8 h-12'>
-                                    <Link href='/about'>How It Works</Link>
-                                </Button>
+                                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                                    <Button asChild size='lg' className='bg-white text-neutral-950 hover:bg-neutral-200 px-8 h-12 font-medium'>
+                                        <Link href='/products'>Shop Products</Link>
+                                    </Button>
+                                </motion.div>
+                                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                                    <Button asChild size='lg' variant='outline' className='border-neutral-700 hover:bg-neutral-800 text-neutral-300 px-8 h-12'>
+                                        <Link href='/about'>How It Works</Link>
+                                    </Button>
+                                </motion.div>
                             </motion.div>
 
                             <motion.div
@@ -366,17 +374,33 @@ export default function Home() {
                                                 <div className='flex items-center gap-3'>
                                                     <div className='flex flex-col'>
                                                         <span className='text-lg font-semibold text-white'>
-                                                            R$ {product.price.toFixed(2)}
+                                                            R$ {formatPrice(product.price)}
                                                         </span>
                                                     </div>
                                                     <div className='ml-auto'>
                                                         <Button
                                                             size='sm'
-                                                            className='bg-white text-neutral-950 hover:bg-neutral-200'
+                                                            className={`relative overflow-hidden transition-all duration-300 ${
+                                                                justAdded === product.id
+                                                                    ? 'bg-emerald-500 text-white scale-110'
+                                                                    : 'bg-white text-neutral-950 hover:bg-neutral-200'
+                                                            }`}
                                                             onClick={(e) => handleAddToCart(e, product)}
                                                             disabled={product.stock <= 0}
                                                         >
-                                                            <ShoppingCart className='w-4 h-4' />
+                                                            <motion.span
+                                                                key={justAdded === product.id ? 'check' : 'cart'}
+                                                                initial={{ scale: 0, opacity: 0 }}
+                                                                animate={{ scale: 1, opacity: 1 }}
+                                                                exit={{ scale: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.2 }}
+                                                            >
+                                                                {justAdded === product.id ? (
+                                                                    <CheckCircle2 className='w-4 h-4' />
+                                                                ) : (
+                                                                    <ShoppingCart className='w-4 h-4' />
+                                                                )}
+                                                            </motion.span>
                                                         </Button>
                                                     </div>
                                                 </div>

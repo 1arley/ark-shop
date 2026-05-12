@@ -11,16 +11,35 @@ import { Textarea } from '@/components/ui/textarea'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
+import { apiClient } from '@/services/api'
+
 export default function ContactPage() {
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setSubmitting(true)
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-        setSubmitting(false)
-        setSubmitted(true)
+        setError(null)
+
+        const form = e.currentTarget
+        const formData = new FormData(form)
+
+        try {
+            await apiClient.post('/contact', {
+                name: String(formData.get('name') || ''),
+                email: String(formData.get('email') || ''),
+                subject: String(formData.get('subject') || ''),
+                message: String(formData.get('message') || ''),
+            })
+            setSubmitted(true)
+            form.reset()
+        } catch {
+            setError('Failed to send message. Please try again later.')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -153,10 +172,17 @@ export default function ContactPage() {
                                         </div>
                                     ) : (
                                         <form onSubmit={handleSubmit} className='space-y-6'>
+                                            {error && (
+                                                <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm'>
+                                                    {error}
+                                                </div>
+                                            )}
+
                                             <div>
                                                 <label className='text-sm text-slate-400 mb-2 block'>Name</label>
                                                 <Input
                                                     type='text'
+                                                    name='name'
                                                     placeholder='Your name'
                                                     className='bg-slate-700/30 border-slate-600 text-white'
                                                     required
@@ -167,6 +193,7 @@ export default function ContactPage() {
                                                 <label className='text-sm text-slate-400 mb-2 block'>Email</label>
                                                 <Input
                                                     type='email'
+                                                    name='email'
                                                     placeholder='you@example.com'
                                                     className='bg-slate-700/30 border-slate-600 text-white'
                                                     required
@@ -176,6 +203,7 @@ export default function ContactPage() {
                                             <div>
                                                 <label className='text-sm text-slate-400 mb-2 block'>Subject</label>
                                                 <select
+                                                    name='subject'
                                                     className='w-full px-3 py-2 rounded-md bg-slate-700/30 border border-slate-600 text-white'
                                                     required
                                                 >
@@ -191,6 +219,7 @@ export default function ContactPage() {
                                             <div>
                                                 <label className='text-sm text-slate-400 mb-2 block'>Message</label>
                                                 <Textarea
+                                                    name='message'
                                                     placeholder='Tell us how we can help you...'
                                                     className='bg-slate-700/30 border-slate-600 text-white min-h-[150px]'
                                                     required

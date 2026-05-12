@@ -9,28 +9,52 @@ import {
     Truck,
     Shield,
     Download,
-    Heart,
-    Share2,
     Package,
     Loader2,
+    Key,
+    Save,
+    X,
+    Plus,
+    Edit2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { apiClient } from '@/services/api'
 import { useCart } from '@/hooks/use-cart'
-import type { Product } from '@/types/api'
+import { useAuth } from '@/hooks/use-auth'
+import { formatPrice, extractApiError } from '@/lib/utils'
+import type { Product, Category } from '@/types/api'
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params)
+    const { user } = useAuth()
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
+
     const [product, setProduct] = useState<Product | null>(null)
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [favorite, setFavorite] = useState(false)
     const { addItem } = useCart()
+
+    // Admin: categories for editing
+    const [categories, setCategories] = useState<Category[]>([])
+
+    // Admin: edit mode
+    const [editing, setEditing] = useState(false)
+    const [editForm, setEditForm] = useState({ name: '', description: '', price: '', stock: '', categoryId: '', imageUrl: '' })
+    const [saving, setSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
+    const [saveSuccess, setSaveSuccess] = useState(false)
+
+    // Admin: key management
+    const [keyBatch, setKeyBatch] = useState('')
+    const [addingKeys, setAddingKeys] = useState(false)
+    const [keyError, setKeyError] = useState<string | null>(null)
+    const [keySuccess, setKeySuccess] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadProduct() {
@@ -38,13 +62,32 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 setIsLoading(true)
                 setError(null)
                 const response = await apiClient.products.getById(slug)
-                setProduct(response.data)
+                const p = response.data
+                setProduct(p)
+
+                // Sync edit form
+                setEditForm({
+                    name: p.name,
+                    description: p.description || '',
+                    price: String(p.price),
+                    stock: String(p.stock),
+                    categoryId: p.categoryId || '',
+                    imageUrl: p.imageUrl || '',
+                })
+
+                // Load categories for admin edit
+                if (isAdmin) {
+                    try {
+                        const catRes = await apiClient.categories.list()
+                        setCategories(Array.isArray(catRes.data) ? catRes.data : [])
+                    } catch { /* ignore */ }
+                }
 
                 // Load related products from same category
-                if (response.data.categoryId) {
+                if (p.categoryId) {
                     try {
                         const relatedResponse = await apiClient.products.list({
-                            categoryId: response.data.categoryId,
+                            categoryId: p.categoryId,
                             limit: 4,
                             isActive: true,
                         })
@@ -62,7 +105,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             }
         }
         loadProduct()
-    }, [slug])
+    }, [slug, isAdmin])
 
     const handleAddToCart = () => {
         if (!product) return
@@ -74,6 +117,62 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             platform: product.category?.name || '',
             image: product.imageUrl || undefined,
         })
+    }
+
+    // Admin: save product edit
+    const handleSave = async () => {
+        if (!product) return
+        setSaving(true)
+        setSaveError(null)
+        setSaveSuccess(false)
+
+        const parsedPrice = parseFloat(editForm.price)
+        const parsedStock = parseInt(editForm.stock, 10)
+        if (isNaN(parsedPrice) || parsedPrice <= 0) {
+            setSaveError('Price must be a valid positive number')
+            setSaving(false)
+            return
+        }
+        if (isNaN(parsedStock) || parsedStock < 0) {
+            setSaveError('Stock must be a valid non-negative number')
+            setSaving(false)
+            return
+        }
+
+        try {
+            const updated = await apiClient.admin.updateProduct(product.id, {
+                name: editForm.name,
+                description: editForm.description || undefined,
+                price: parsedPrice,
+                stock: parsedStock,
+                categoryId: editForm.categoryId || undefined,
+                imageUrl: editForm.imageUrl || undefined,
+            })
+            setProduct(updated.data)
+            setEditing(false)
+            setSaveSuccess(true)
+            setTimeout(() => setSaveSuccess(false), 3000)
+        } catch (err) {
+            setSaveError(extractApiError(err, 'Failed to save'))
+        }
+        setSaving(false)
+    }
+
+    // Admin: add keys
+    const handleAddKeys = async () => {
+        if (!product || !keyBatch.trim()) return
+        setAddingKeys(true)
+        setKeyError(null)
+        setKeySuccess(null)
+        try {
+            const keysList = keyBatch.split('\n').map(k => k.trim()).filter(Boolean)
+            const res = await apiClient.admin.addKeys(product.id, keysList)
+            setKeySuccess(`${res.data.count} key(s) added successfully!`)
+            setKeyBatch('')
+        } catch (err) {
+            setKeyError(extractApiError(err, 'Failed to add keys'))
+        }
+        setAddingKeys(false)
     }
 
     if (isLoading) {
@@ -140,9 +239,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <h1 className='text-4xl md:text-5xl font-semibold text-white mb-4'>
-                            {product.name}
-                        </h1>
+                        <div className='flex items-center gap-4 mb-4'>
+                            <h1 className='text-4xl md:text-5xl font-semibold text-white'>
+                                {product.name}
+                            </h1>
+                            {isAdmin && (
+                                <Badge className='bg-violet-600 text-white border-0 text-xs'>
+                                    ADMIN
+                                </Badge>
+                            )}
+                        </div>
                         <div className='flex items-center gap-4 mb-4'>
                             <Badge className={product.stock > 0 ? 'bg-emerald-600 text-white border-0' : 'bg-red-600 text-white border-0'}>
                                 {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
@@ -174,19 +280,17 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                     )}
                                 </div>
                                 <CardContent className='p-6'>
-                                    <div className='flex gap-4'>
+                                    {/* Admin: edit button */}
+                                    {isAdmin && !editing && (
                                         <Button
                                             variant='outline'
-                                            size='icon'
-                                            className='border-slate-600 hover:bg-slate-700'
-                                            onClick={() => setFavorite(!favorite)}
+                                            className='border-slate-600 hover:bg-slate-700 w-full'
+                                            onClick={() => setEditing(true)}
                                         >
-                                            <Heart className={`w-5 h-5 ${favorite ? 'fill-red-500 text-red-500' : ''}`} />
+                                            <Edit2 className='w-4 h-4 mr-2' />
+                                            Edit Product
                                         </Button>
-                                        <Button variant='outline' size='icon' className='border-slate-600 hover:bg-slate-700'>
-                                            <Share2 className='w-5 h-5' />
-                                        </Button>
-                                    </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </motion.div>
@@ -197,118 +301,225 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.5 }}
                         >
-                            <div className='space-y-6'>
-                                {/* Price */}
-                                <div>
-                                    <div className='flex items-center gap-4 mb-2'>
-                                        <span className='text-4xl font-bold text-white'>R$ {product.price.toFixed(2)}</span>
-                                        {discount > 0 && (
-                                            <Badge className='bg-emerald-600 text-white border-0'>
-                                                Digital Key
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    <p className='text-sm text-slate-400'>
-                                        Instant digital delivery after purchase
-                                    </p>
-                                </div>
-
-                                {/* Description */}
-                                {product.description && (
+                            {editing ? (
+                                /* Admin: Inline Edit Form */
+                                <div className='space-y-4'>
+                                    <h3 className='text-lg font-semibold text-white mb-4'>Editing: {product.name}</h3>
+                                    {saveError && <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm'>{saveError}</div>}
+                                    {saveSuccess && <div className='p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm flex items-center gap-2'><CheckCircle2 className='w-4 h-4' />Saved!</div>}
                                     <div>
-                                        <h3 className='text-lg font-semibold text-white mb-3'>Description</h3>
-                                        <p className='text-slate-400'>{product.description}</p>
+                                        <label className='text-sm text-slate-400 mb-1 block'>Name</label>
+                                        <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
                                     </div>
-                                )}
-
-                                {/* Features */}
-                                <div>
-                                    <h3 className='text-lg font-semibold text-white mb-3'>Key Features</h3>
-                                    <ul className='space-y-2'>
-                                        {[
-                                            'Instant digital delivery via email',
-                                            'Verified and authentic key',
-                                            'No expiration date',
-                                            'Secure encrypted delivery',
-                                        ].map((feature, index) => (
-                                            <li key={index} className='flex items-center gap-3 text-slate-400'>
-                                                <CheckCircle2 className='w-5 h-5 text-emerald-500 flex-shrink-0' />
-                                                {feature}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <div>
+                                        <label className='text-sm text-slate-400 mb-1 block'>Description</label>
+                                        <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm min-h-[80px]' />
+                                    </div>
+                                    <div className='grid grid-cols-2 gap-4'>
+                                        <div>
+                                            <label className='text-sm text-slate-400 mb-1 block'>Price</label>
+                                            <Input type='number' step='0.01' value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
+                                        </div>
+                                        <div>
+                                            <label className='text-sm text-slate-400 mb-1 block'>Stock</label>
+                                            <Input type='number' value={editForm.stock} onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className='text-sm text-slate-400 mb-1 block'>Category</label>
+                                        <select value={editForm.categoryId} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white text-sm'>
+                                            <option value=''>No category</option>
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className='text-sm text-slate-400 mb-1 block'>Image URL</label>
+                                        <Input value={editForm.imageUrl} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
+                                    </div>
+                                    <div className='flex gap-3 pt-2'>
+                                        <Button onClick={handleSave} disabled={saving} className='bg-indigo-600 hover:bg-indigo-500'>
+                                            {saving ? <Loader2 className='w-4 h-4 animate-spin' /> : <><Save className='w-4 h-4 mr-2' />Save Changes</>}
+                                        </Button>
+                                        <Button variant='outline' onClick={() => setEditing(false)} className='border-slate-600 text-slate-300'>
+                                            Cancel
+                                        </Button>
+                                    </div>
                                 </div>
+                            ) : (
+                                /* Normal Product Info */
+                                <div className='space-y-6'>
+                                    <div>
+                                        <div className='flex items-center gap-4 mb-2'>
+                                            <span className='text-4xl font-bold text-white'>R$ {formatPrice(product.price)}</span>
+                                            {discount > 0 && (
+                                                <Badge className='bg-emerald-600 text-white border-0'>
+                                                    Digital Key
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <p className='text-sm text-slate-400'>
+                                            Instant digital delivery after purchase
+                                        </p>
+                                    </div>
 
-                                {/* Specifications */}
-                                <div>
-                                    <h3 className='text-lg font-semibold text-white mb-3'>Specifications</h3>
-                                    <Card className='bg-slate-800/30 border-slate-700'>
-                                        <CardContent className='p-4'>
-                                            <div className='grid grid-cols-2 gap-4'>
-                                                {product.category && (
+                                    {product.description && (
+                                        <div>
+                                            <h3 className='text-lg font-semibold text-white mb-3'>Description</h3>
+                                            <p className='text-slate-400'>{product.description}</p>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <h3 className='text-lg font-semibold text-white mb-3'>Key Features</h3>
+                                        <ul className='space-y-2'>
+                                            {[
+                                                'Instant digital delivery via email',
+                                                'Verified and authentic key',
+                                                'No expiration date',
+                                                'Secure encrypted delivery',
+                                            ].map((feature, index) => (
+                                                <li key={index} className='flex items-center gap-3 text-slate-400'>
+                                                    <CheckCircle2 className='w-5 h-5 text-emerald-500 flex-shrink-0' />
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h3 className='text-lg font-semibold text-white mb-3'>Specifications</h3>
+                                        <Card className='bg-slate-800/30 border-slate-700'>
+                                            <CardContent className='p-4'>
+                                                <div className='grid grid-cols-2 gap-4'>
+                                                    {product.category && (
+                                                        <div>
+                                                            <div className='text-sm text-slate-500'>Category</div>
+                                                            <div className='text-sm text-white font-medium'>{product.category.name}</div>
+                                                        </div>
+                                                    )}
                                                     <div>
-                                                        <div className='text-sm text-slate-500'>Category</div>
-                                                        <div className='text-sm text-white font-medium'>{product.category.name}</div>
+                                                        <div className='text-sm text-slate-500'>Type</div>
+                                                        <div className='text-sm text-white font-medium'>Digital Key</div>
                                                     </div>
-                                                )}
-                                                <div>
-                                                    <div className='text-sm text-slate-500'>Type</div>
-                                                    <div className='text-sm text-white font-medium'>Digital Key</div>
+                                                    <div>
+                                                        <div className='text-sm text-slate-500'>Delivery</div>
+                                                        <div className='text-sm text-white font-medium'>Instant Digital</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className='text-sm text-slate-500'>Stock</div>
+                                                        <div className='text-sm text-white font-medium'>{product.stock > 0 ? `${product.stock} available` : 'Out of stock'}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div className='text-sm text-slate-500'>Delivery</div>
-                                                    <div className='text-sm text-white font-medium'>Instant Digital</div>
-                                                </div>
-                                                <div>
-                                                    <div className='text-sm text-slate-500'>Stock</div>
-                                                    <div className='text-sm text-white font-medium'>{product.stock > 0 ? `${product.stock} available` : 'Out of stock'}</div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
 
-                                {/* Purchase Actions */}
-                                <div className='flex gap-4 pt-4'>
-                                    <Button
-                                        size='lg'
-                                        className='bg-indigo-600 hover:bg-indigo-500 flex-1 h-14 text-lg font-semibold'
-                                        onClick={handleAddToCart}
-                                        disabled={product.stock <= 0}
-                                    >
-                                        <ShoppingCart className='w-5 h-5 mr-2' />
-                                        Add to Cart
-                                    </Button>
-                                    <Button
-                                        size='lg'
-                                        variant='outline'
-                                        className='border-slate-600 hover:bg-slate-700 h-14 px-8'
-                                        disabled={product.stock <= 0}
-                                    >
-                                        <Link href='/cart'>Buy Now</Link>
-                                    </Button>
-                                </div>
+                                    <div className='flex gap-4 pt-4'>
+                                        <Button
+                                            size='lg'
+                                            className='bg-indigo-600 hover:bg-indigo-500 flex-1 h-14 text-lg font-semibold'
+                                            onClick={handleAddToCart}
+                                            disabled={product.stock <= 0}
+                                        >
+                                            <ShoppingCart className='w-5 h-5 mr-2' />
+                                            Add to Cart
+                                        </Button>
+                                        <Button
+                                            size='lg'
+                                            variant='outline'
+                                            className='border-slate-600 hover:bg-slate-700 h-14 px-8'
+                                            disabled={product.stock <= 0}
+                                        >
+                                            <Link href='/cart'>Buy Now</Link>
+                                        </Button>
+                                    </div>
 
-                                {/* Trust Badges */}
-                                <div className='grid grid-cols-3 gap-4 pt-4'>
-                                    <div className='text-center'>
-                                        <Truck className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
-                                        <div className='text-xs text-slate-400'>Instant Delivery</div>
-                                    </div>
-                                    <div className='text-center'>
-                                        <Shield className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
-                                        <div className='text-xs text-slate-400'>100% Genuine</div>
-                                    </div>
-                                    <div className='text-center'>
-                                        <Download className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
-                                        <div className='text-xs text-slate-400'>Digital Key</div>
+                                    <div className='grid grid-cols-3 gap-4 pt-4'>
+                                        <div className='text-center'>
+                                            <Truck className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
+                                            <div className='text-xs text-slate-400'>Instant Delivery</div>
+                                        </div>
+                                        <div className='text-center'>
+                                            <Shield className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
+                                            <div className='text-xs text-slate-400'>100% Genuine</div>
+                                        </div>
+                                        <div className='text-center'>
+                                            <Download className='w-8 h-8 text-indigo-400 mx-auto mb-2' />
+                                            <div className='text-xs text-slate-400'>Digital Key</div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </motion.div>
                     </div>
                 </div>
             </section>
+
+            {/* Admin: Key Management Section */}
+            {isAdmin && !editing && (
+                <section className='py-12 bg-slate-900/30'>
+                    <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <h2 className='text-2xl font-semibold text-white mb-6 flex items-center gap-2'>
+                                <Key className='w-6 h-6 text-sky-400' />
+                                Key Management
+                            </h2>
+                            <Card className='bg-slate-800/30 border-slate-700'>
+                                <CardContent className='p-6'>
+                                    <div className='grid md:grid-cols-2 gap-6'>
+                                        <div>
+                                            <h3 className='text-sm font-semibold text-white mb-3'>Add New Keys</h3>
+                                            {keyError && (
+                                                <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm mb-3'>{keyError}</div>
+                                            )}
+                                            {keySuccess && (
+                                                <div className='p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm mb-3 flex items-center gap-2'>
+                                                    <CheckCircle2 className='w-4 h-4' />
+                                                    {keySuccess}
+                                                </div>
+                                            )}
+                                            <textarea
+                                                value={keyBatch}
+                                                onChange={(e) => setKeyBatch(e.target.value)}
+                                                placeholder='XXXXX-XXXXX-XXXXX&#10;YYYYY-YYYYY-YYYYY'
+                                                className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm font-mono min-h-[120px] mb-3'
+                                            />
+                                            <Button
+                                                onClick={handleAddKeys}
+                                                disabled={addingKeys || !keyBatch.trim()}
+                                                className='bg-indigo-600 hover:bg-indigo-500'
+                                            >
+                                                {addingKeys ? <Loader2 className='w-4 h-4 animate-spin' /> : <Plus className='w-4 h-4 mr-2' />}
+                                                Add Keys
+                                            </Button>
+                                        </div>
+                                        <div className='text-slate-400 text-sm space-y-3'>
+                                            <h3 className='text-sm font-semibold text-white mb-3'>Instructions</h3>
+                                            <p>Paste one key per line in the text area. Each line will be added as a separate key entry for this product.</p>
+                                            <div className='p-3 bg-slate-800/50 rounded-lg'>
+                                                <p className='text-xs text-slate-500 mb-2'>Example:</p>
+                                                <code className='text-xs text-slate-300 font-mono block'>
+                                                    ABCDE-FGHIJ-KLMNO<br />
+                                                    PQRST-UVWXY-Z1234<br />
+                                                    56789-ABCDE-FGHIJ
+                                                </code>
+                                            </div>
+                                            <p className='text-xs text-slate-500'>Keys are automatically marked as AVAILABLE when added.</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    </div>
+                </section>
+            )}
 
             {/* Related Products */}
             {relatedProducts.length > 0 && (
@@ -350,7 +561,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                                     {item.name}
                                                 </h3>
                                                 <div className='flex items-center gap-2'>
-                                                    <span className='text-lg font-bold text-white'>R$ {item.price.toFixed(2)}</span>
+                                                    <span className='text-lg font-bold text-white'>R$ {formatPrice(item.price)}</span>
                                                 </div>
                                             </CardContent>
                                         </Card>
