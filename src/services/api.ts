@@ -372,6 +372,48 @@ class ApiClientClass {
   admin = {
     dashboard: () =>
       this.get<DashboardStats>('/admin/dashboard', { requiresAuth: true }),
+
+    listProducts: (params?: { page?: number; limit?: number; search?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      if (params?.search) searchParams.set('search', params.search)
+      const query = searchParams.toString()
+      return this.get<PaginatedResponse<Product>>(`/admin/products${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    createProduct: (data: { name: string; description?: string; price: number; stock: number; categoryId?: string; imageUrl?: string }) =>
+      this.post<Product>('/admin/products', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    updateProduct: (id: string, data: { name?: string; description?: string; price?: number; stock?: number; categoryId?: string; imageUrl?: string; isActive?: boolean }) =>
+      this.patch<Product>(`/admin/products/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    deleteProduct: (id: string) =>
+      this.delete<void>(`/admin/products/${id}`, { requiresAuth: true }),
+
+    listOrders: (params?: { page?: number; limit?: number; status?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      if (params?.status) searchParams.set('status', params.status)
+      const query = searchParams.toString()
+      return this.get<PaginatedResponse<Order>>(`/admin/orders${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    updateOrderStatus: (id: string, status: string) =>
+      this.patch<Order>(`/admin/orders/${id}/status`, { status }, { requiresAuth: true }),
+
+    addKeys: (productId: string, keys: string[]) =>
+      this.post<{ count: number }>(`/admin/products/${productId}/keys`, { keys }, { requiresAuth: true }),
+
+    listKeys: (params?: { page?: number; limit?: number; productId?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      if (params?.productId) searchParams.set('productId', params.productId)
+      const query = searchParams.toString()
+      return this.get<PaginatedResponse<{ id: string; key: string; status: string; product: { name: string } }>>(`/admin/keys${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
   }
 }
 
