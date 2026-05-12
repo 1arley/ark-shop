@@ -10,7 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/services/api'
-import { formatPrice } from '@/lib/utils'
+import { extractApiError } from '@/lib/utils'
 import type { Product, Category } from '@/types/api'
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }
@@ -134,7 +134,7 @@ export default function AdminProductsPage() {
       }
       resetForm()
       await fetchProducts()
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Failed to save product') }
+    } catch (e: unknown) { setError(extractApiError(e, 'Failed to save product')) }
     setSaving(false)
   }
 
@@ -145,7 +145,7 @@ export default function AdminProductsPage() {
       await apiClient.admin.deleteProduct(id)
       await fetchProducts()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Failed to delete product')
+      alert(extractApiError(e, 'Failed to delete product'))
     }
     setDeleting(null)
   }
