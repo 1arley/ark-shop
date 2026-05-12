@@ -10,7 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/services/api'
-import { extractApiError } from '@/lib/utils'
+import { formatPrice, extractApiError } from '@/lib/utils'
 import type { Product, Category } from '@/types/api'
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }
