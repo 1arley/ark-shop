@@ -312,7 +312,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                     </div>
                                     <div>
                                         <label className='text-sm text-slate-400 mb-1 block'>Description</label>
-                                        <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm min-h-[80px]' />
+                                        <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm min-h-20' />
                                     </div>
                                     <div className='grid grid-cols-2 gap-4'>
                                         <div>
@@ -488,7 +488,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                                 value={keyBatch}
                                                 onChange={(e) => setKeyBatch(e.target.value)}
                                                 placeholder='XXXXX-XXXXX-XXXXX&#10;YYYYY-YYYYY-YYYYY'
-                                                className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm font-mono min-h-[120px] mb-3'
+                                                className='w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white text-sm font-mono min-h-28 mb-3'
                                             />
                                             <Button
                                                 onClick={handleAddKeys}

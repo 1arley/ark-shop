@@ -8,9 +8,18 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['var(--font-display)'],
+        body: ['var(--font-body)'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'monospace'],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+      },
+      spacing: {
+        'section': '4rem',
+        'section-lg': '6rem',
       },
     },
   },

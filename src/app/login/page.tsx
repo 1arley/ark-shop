@@ -48,12 +48,8 @@ function LoginForm() {
             <Header />
 
             {/* Hero Section */}
-      <section className='relative pt-24 pb-12 bg-neutral-900'>
-        <div className='absolute inset-0'>
-          <div className='absolute top-20 right-0 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl' />
-        </div>
-
-        <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+      <section className='section-hero'>
+        <div className='section-container'>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -1,16 +1,18 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Bebas_Neue, Karla } from 'next/font/google'
 import { ErrorBoundary } from '@/components/core/ErrorBoundary'
 import './globals.css'
 
-const inter = Inter({
-  variable: '--font-inter',
+const displayFont = Bebas_Neue({
+  variable: '--font-display',
   subsets: ['latin'],
+  weight: '400',
 })
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-jetbrains-mono',
+const bodyFont = Karla({
+  variable: '--font-body',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 })
 
 export const metadata: Metadata = {
@@ -49,7 +51,7 @@ export default function RootLayout({
         <link rel="alternate icon" href="/icons/favicon.svg" />
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${displayFont.variable} ${bodyFont.variable} antialiased font-body`}
       >
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>

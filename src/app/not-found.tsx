@@ -15,7 +15,7 @@ export default function NotFound() {
                         <h1 className='text-3xl md:text-4xl font-medium'>Page Not Found</h1>
                         <p className='text-sm md:text-base font-light text-muted-foreground'>Error 404</p>
                     </div>
-                    <p className='text-wrap max-w-[28rem] text-slate-400'>
+                    <p className='text-wrap max-w-xl text-slate-400'>
                         Sorry! The content you&apos;re looking for may have been removed, but new opportunities always await. How about exploring our store to see what we have for you?
                     </p>
                     <div className='flex flex-col md:flex-row gap-4 w-full items-center justify-center'>

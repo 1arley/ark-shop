@@ -546,7 +546,7 @@ function ProductsPageContent() {
                             </div>
                             <div>
                                 <label className='text-sm text-neutral-400 mb-1 block'>Description</label>
-                                <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className='w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm min-h-[80px]' />
+                                <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className='w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm min-h-20' />
                             </div>
                             <div className='grid grid-cols-2 gap-4'>
                                 <div>
@@ -618,7 +618,7 @@ function ProductsPageContent() {
                                     value={keyBatch}
                                     onChange={(e) => setKeyBatch(e.target.value)}
                                     placeholder='XXXXX-XXXXX-XXXXX&#10;YYYYY-YYYYY-YYYYY&#10;ZZZZZ-ZZZZZ-ZZZZZ'
-                                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm font-mono min-h-[200px]'
+                                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-white text-sm font-mono min-h-48'
                                 />
                             </div>
                             <Button

@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { registerSchema, type RegisterFormData } from '@/lib/validations'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import SectionHero from '@/components/layout/SectionHero'
 
 function RegisterForm() {
   const router = useRouter()
@@ -50,28 +51,10 @@ function RegisterForm() {
         <div className='min-h-screen bg-neutral-950'>
             <Header />
 
-            {/* Hero Section */}
-            <section className='relative pt-24 pb-12 bg-neutral-900'>
-                <div className='absolute inset-0'>
-                    <div className='absolute top-20 right-0 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl' />
-                </div>
-
-                <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className='text-center'
-                    >
-                        <h1 className='text-4xl md:text-5xl font-semibold text-white mb-4'>
-                            Create an Account
-                        </h1>
-                        <p className='text-neutral-400 text-lg'>
-                            Join thousands of satisfied customers today
-                        </p>
-                    </motion.div>
-                </div>
-            </section>
+            <SectionHero
+                title='Create an Account'
+                subtitle='Join thousands of satisfied customers today'
+            />
 
             {/* Register Form */}
       <section className='py-12'>

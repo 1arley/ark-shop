@@ -34,6 +34,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import SectionHero from '@/components/layout/SectionHero'
 import { useAuth } from '@/hooks/use-auth'
 import { apiClient } from '@/services/api'
 import { formatPrice } from '@/lib/utils'
@@ -202,33 +203,11 @@ export default function DashboardPage() {
             <Header />
 
             {/* Hero Section */}
-            <section className='relative pt-24 pb-12 bg-neutral-900'>
-                <div className='absolute inset-0'>
-                    <div className='absolute top-20 left-0 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl' />
-                </div>
-
-                <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <div className='flex items-center gap-4 mb-2'>
-                            <h1 className='text-4xl md:text-5xl font-semibold text-white'>
-                                Welcome back, {user?.name || 'User'}!
-                            </h1>
-                            {isAdmin && (
-                                <Badge className='bg-violet-600 text-white border-0 text-xs'>
-                                    ADMIN
-                                </Badge>
-                            )}
-                        </div>
-                        <p className='text-neutral-400 text-lg'>
-                            {isAdmin ? 'Manage your store — products, keys, orders and analytics' : 'Manage your orders and access your digital products'}
-                        </p>
-                    </motion.div>
-                </div>
-            </section>
+            <SectionHero
+              title={`Welcome back, ${user?.name || 'User'}!`}
+              subtitle={isAdmin ? 'Manage your store — products, keys, orders and analytics' : 'Manage your orders and access your digital products'}
+              badge={isAdmin ? <Badge className='bg-violet-600 text-white border-0 text-xs'>ADMIN</Badge> : undefined}
+            />
 
             {/* Dashboard Content */}
             <section className='py-12'>

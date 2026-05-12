@@ -21,5 +21,123 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+@layer components {
+  /* ==========================================================
+     Consistent Section Wrapper — used on ALL pages
+     ========================================================== */
+  .section-hero {
+    @apply relative pt-28 pb-16 bg-neutral-900;
+  }
+
+  .section-hero::before {
+    content: '';
+    @apply absolute inset-0;
+    background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99, 102, 241, 0.08), transparent);
+  }
+
+  .section-content {
+    @apply py-16;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ==========================================================
+     Card Patterns
+     ========================================================== */
+  .card-base {
+    @apply bg-neutral-900/50 border border-neutral-800 rounded-xl;
+  }
+
+  .card-hoverable {
+    @apply card-base transition-all duration-200 hover:bg-neutral-800/50 hover:border-neutral-700;
+  }
+
+  .card-header {
+    @apply text-lg font-semibold text-white;
+  }
+
+  .card-label {
+    @apply text-xs text-neutral-500;
+  }
+
+  .card-value {
+    @apply text-xl font-bold text-white;
+  }
+
+  /* ==========================================================
+     Form Patterns
+     ========================================================== */
+  .input-base {
+    @apply w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2.5 text-sm
+           text-white placeholder:text-neutral-500
+           focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/20
+           transition-colors duration-200;
+  }
+
+  .label-base {
+    @apply block text-sm text-neutral-400 mb-1.5;
+  }
+
+  .btn-primary {
+    @apply bg-white text-neutral-950 hover:bg-neutral-200 transition-colors duration-200;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent border border-neutral-700 text-neutral-300 hover:bg-neutral-800 transition-colors duration-200;
+  }
+
+  .btn-admin {
+    @apply bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors duration-200;
+  }
+
+  .btn-danger {
+    @apply bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors duration-200;
+  }
+
+  .btn-success {
+    @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors duration-200;
+  }
+
+  /* ==========================================================
+     Badge Patterns
+     ========================================================== */
+  .badge-base {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border;
+  }
+
+  .badge-success { @apply badge-base border-emerald-500/30 text-emerald-400; }
+  .badge-warning { @apply badge-base border-amber-500/30 text-amber-400; }
+  .badge-error   { @apply badge-base border-red-500/30 text-red-400; }
+  .badge-info    { @apply badge-base border-sky-500/30 text-sky-400; }
+  .badge-muted   { @apply badge-base border-neutral-700 text-neutral-500; }
+
+  /* ==========================================================
+     Inline Icon + Text
+     ========================================================== */
+  .icon-text {
+    @apply flex items-center gap-1.5;
+  }
+
+  /* ==========================================================
+     Admin specific
+     ========================================================== */
+  .admin-card {
+    @apply bg-neutral-900/50 border border-neutral-800 rounded-xl;
+  }
+
+  .admin-stat {
+    @apply text-center p-3 bg-neutral-800/50 rounded-lg;
+  }
+
+  /* ==========================================================
+     Loading spinner
+     ========================================================== */
+  .spinner {
+    @apply w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin;
+  }
 }

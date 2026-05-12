@@ -221,7 +221,7 @@ export default function ContactPage() {
                                                 <Textarea
                                                     name='message'
                                                     placeholder='Tell us how we can help you...'
-                                                    className='bg-slate-700/30 border-slate-600 text-white min-h-[150px]'
+                                                    className='bg-slate-700/30 border-slate-600 text-white min-h-36'
                                                     required
                                                 />
                                             </div>
