@@ -12,6 +12,14 @@ import {
     CheckCircle2,
     Loader2,
     AlertCircle,
+    BarChart3,
+    Key,
+    ShoppingBag,
+    Edit2,
+    Plus,
+    TrendingUp,
+    Clock,
+    DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,7 +28,8 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/hooks/use-auth'
 import { apiClient } from '@/services/api'
-import type { Order, OrderStatus } from '@/types/api'
+import { formatPrice } from '@/lib/utils'
+import type { Order, OrderStatus, DashboardStats } from '@/types/api'
 
 function getStatusConfig(status: OrderStatus) {
     switch (status) {
@@ -53,6 +62,12 @@ export default function DashboardPage() {
     const [orderKeys, setOrderKeys] = useState<Record<string, { productName: string; key: string }[]>>({})
     const [loadingKeys, setLoadingKeys] = useState<string | null>(null)
 
+    // Admin state
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
+    const [adminStats, setAdminStats] = useState<DashboardStats | null>(null)
+    const [loadingAdminStats, setLoadingAdminStats] = useState(false)
+    const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -67,12 +82,13 @@ export default function DashboardPage() {
         async function loadOrders() {
             try {
                 setIsLoading(true)
-                const response = await apiClient.orders.list({ limit: 20 })
-                const data = response.data
-                if (Array.isArray(data)) {
-                    setOrders(data)
+                if (isAdmin) {
+                    const response = await apiClient.admin.listOrders({ limit: 50 })
+                    setOrders(response.data.data || [])
                 } else {
-                    setOrders(data.data || [])
+                    const response = await apiClient.orders.list({ limit: 20 })
+                    const data = response.data
+                    setOrders(Array.isArray(data) ? data : (data.data || []))
                 }
             } catch {
                 // keep empty
@@ -81,16 +97,30 @@ export default function DashboardPage() {
             }
         }
         loadOrders()
-    }, [isAuthenticated])
+    }, [isAuthenticated, isAdmin])
+
+    // Fetch admin stats
+    useEffect(() => {
+        if (!isAuthenticated || !isAdmin) return
+        async function loadAdminStats() {
+            setLoadingAdminStats(true)
+            try {
+                const res = await apiClient.admin.dashboard()
+                setAdminStats(res.data)
+            } catch (err) { console.error('Failed to load admin stats:', err) }
+            setLoadingAdminStats(false)
+        }
+        loadAdminStats()
+    }, [isAuthenticated, isAdmin])
 
     const handleDownloadKeys = async (orderId: string) => {
-        if (orderKeys[orderId]) return // Already loaded
+        if (orderKeys[orderId]) return
         setLoadingKeys(orderId)
         try {
             const response = await apiClient.orders.downloadKeys(orderId)
             setOrderKeys((prev) => ({ ...prev, [orderId]: response.data }))
-        } catch {
-            // show error inline
+        } catch (err) {
+            console.error('Failed to download keys:', err)
         } finally {
             setLoadingKeys(null)
         }
@@ -107,7 +137,6 @@ export default function DashboardPage() {
             setSelectedOrder(null)
         } else {
             setSelectedOrder(orderId)
-            // Auto-load keys for delivered orders
             const order = orders.find((o) => o.id === orderId)
             if (order && order.status === 'DELIVERED') {
                 await handleDownloadKeys(orderId)
@@ -115,11 +144,21 @@ export default function DashboardPage() {
         }
     }
 
+    const updateOrderStatus = async (orderId: string, status: string) => {
+        setUpdatingOrder(orderId)
+        try {
+            await apiClient.admin.updateOrderStatus(orderId, status)
+            const response = await apiClient.admin.listOrders({ limit: 50 })
+            setOrders(response.data.data || [])
+        } catch (err) { console.error('Failed to update order status:', err) }
+        setUpdatingOrder(null)
+    }
+
     const stats = [
         { label: 'Total Orders', value: String(orders.length), icon: Package },
         {
             label: 'Total Spent',
-            value: `R$ ${orders.reduce((sum, o) => sum + o.totalAmount, 0).toFixed(2)}`,
+            value: `R$ ${formatPrice(orders.reduce((sum, o) => sum + Number(o.totalAmount), 0))}`,
             icon: CreditCard,
         },
         {
@@ -157,11 +196,18 @@ export default function DashboardPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <h1 className='text-4xl md:text-5xl font-semibold text-white mb-2'>
-                            Welcome back, {user?.name || 'User'}!
-                        </h1>
+                        <div className='flex items-center gap-4 mb-2'>
+                            <h1 className='text-4xl md:text-5xl font-semibold text-white'>
+                                Welcome back, {user?.name || 'User'}!
+                            </h1>
+                            {isAdmin && (
+                                <Badge className='bg-violet-600 text-white border-0 text-xs'>
+                                    ADMIN
+                                </Badge>
+                            )}
+                        </div>
                         <p className='text-neutral-400 text-lg'>
-                            Manage your orders and access your digital products
+                            {isAdmin ? 'Manage your store — products, keys, orders and analytics' : 'Manage your orders and access your digital products'}
                         </p>
                     </motion.div>
                 </div>
@@ -170,7 +216,150 @@ export default function DashboardPage() {
             {/* Dashboard Content */}
             <section className='py-12'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    {/* Stats */}
+                    {/* Admin Stats Section */}
+                    {isAdmin && adminStats && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className='mb-12'
+                        >
+                            <h2 className='text-xl font-semibold text-white mb-6 flex items-center gap-2'>
+                                <BarChart3 className='w-5 h-5 text-violet-400' />
+                                Store Overview
+                            </h2>
+
+                            {/* Revenue */}
+                            <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
+                                {[
+                                    { label: 'Total Revenue', value: `R$ ${formatPrice(adminStats.revenue.total)}`, icon: TrendingUp },
+                                    { label: 'Today', value: `R$ ${formatPrice(adminStats.revenue.today)}`, icon: DollarSign },
+                                    { label: 'This Week', value: `R$ ${formatPrice(adminStats.revenue.thisWeek)}`, icon: Clock },
+                                    { label: 'This Month', value: `R$ ${formatPrice(adminStats.revenue.thisMonth)}`, icon: TrendingUp },
+                                ].map((item) => (
+                                    <Card key={item.label} className='bg-neutral-900/50 border-neutral-800'>
+                                        <CardContent className='p-5'>
+                                            <div className='flex items-center justify-between'>
+                                                <div>
+                                                    <div className='text-xs text-neutral-500 mb-1'>{item.label}</div>
+                                                    <div className='text-xl font-bold text-white'>{item.value}</div>
+                                                </div>
+                                                <item.icon className='w-8 h-8 text-emerald-500/50' />
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            {/* Products, Keys, Orders Summary + Quick Actions */}
+                            <div className='grid md:grid-cols-3 gap-6'>
+                                <Card className='bg-neutral-900/50 border-neutral-800'>
+                                    <CardContent className='p-5'>
+                                        <h3 className='text-sm font-semibold text-white mb-4 flex items-center gap-2'>
+                                            <Package className='w-4 h-4 text-violet-400' />
+                                            Products
+                                        </h3>
+                                        <div className='grid grid-cols-2 gap-3 mb-4'>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-white'>{adminStats.products.total}</div>
+                                                <div className='text-xs text-neutral-500'>Total</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-emerald-400'>{adminStats.products.active}</div>
+                                                <div className='text-xs text-neutral-500'>Active</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-amber-400'>{adminStats.products.lowStock}</div>
+                                                <div className='text-xs text-neutral-500'>Low Stock</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-neutral-400'>{adminStats.products.inactive}</div>
+                                                <div className='text-xs text-neutral-500'>Inactive</div>
+                                            </div>
+                                        </div>
+                                        <Link href='/products'>
+                                            <Button variant='outline' size='sm' className='w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800'>
+                                                <Edit2 className='w-3.5 h-3.5 mr-2' />
+                                                Manage Products
+                                            </Button>
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className='bg-neutral-900/50 border-neutral-800'>
+                                    <CardContent className='p-5'>
+                                        <h3 className='text-sm font-semibold text-white mb-4 flex items-center gap-2'>
+                                            <Key className='w-4 h-4 text-sky-400' />
+                                            Keys
+                                        </h3>
+                                        <div className='grid grid-cols-2 gap-3 mb-4'>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-white'>{adminStats.keys.total}</div>
+                                                <div className='text-xs text-neutral-500'>Total</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-emerald-400'>{adminStats.keys.available}</div>
+                                                <div className='text-xs text-neutral-500'>Available</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-amber-400'>{adminStats.keys.reserved}</div>
+                                                <div className='text-xs text-neutral-500'>Reserved</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-sky-400'>{adminStats.keys.delivered}</div>
+                                                <div className='text-xs text-neutral-500'>Delivered</div>
+                                            </div>
+                                        </div>
+                                        <Link href='/products'>
+                                            <Button variant='outline' size='sm' className='w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800'>
+                                                <Plus className='w-3.5 h-3.5 mr-2' />
+                                                Add Keys to Product
+                                            </Button>
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className='bg-neutral-900/50 border-neutral-800'>
+                                    <CardContent className='p-5'>
+                                        <h3 className='text-sm font-semibold text-white mb-4 flex items-center gap-2'>
+                                            <ShoppingBag className='w-4 h-4 text-amber-400' />
+                                            Orders
+                                        </h3>
+                                        <div className='grid grid-cols-2 gap-3 mb-4'>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-white'>{adminStats.orders.total}</div>
+                                                <div className='text-xs text-neutral-500'>Total</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-amber-400'>{adminStats.orders.pending}</div>
+                                                <div className='text-xs text-neutral-500'>Pending</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-emerald-400'>{adminStats.orders.completed}</div>
+                                                <div className='text-xs text-neutral-500'>Completed</div>
+                                            </div>
+                                            <div className='text-center p-2 bg-neutral-800/50 rounded-lg'>
+                                                <div className='text-lg font-bold text-red-400'>{adminStats.orders.cancelled}</div>
+                                                <div className='text-xs text-neutral-500'>Cancelled</div>
+                                            </div>
+                                        </div>
+                                        {/* Orders are already visible below — no extra link needed */}
+                                        <p className='text-xs text-neutral-600 text-center'>
+                                            All orders listed below with status management
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {loadingAdminStats && isAdmin && (
+                        <div className='flex justify-center py-8 mb-8'>
+                            <Loader2 className='w-8 h-8 text-violet-400 animate-spin' />
+                        </div>
+                    )}
+
+                    {/* User Stats */}
                     <div className='grid md:grid-cols-3 gap-6 mb-12'>
                         {stats.map((stat, index) => (
                             <motion.div
@@ -211,7 +400,7 @@ export default function DashboardPage() {
                                     <p className='text-neutral-400 mb-4'>
                                         Our support team is available 24/7 to assist you
                                     </p>
-                                    <Button className='bg-white text-neutral-950 hover:bg-neutral-200'>
+                                    <Button asChild className='bg-white text-neutral-950 hover:bg-neutral-200'>
                                         <a href='/contact'>Contact Support</a>
                                     </Button>
                                 </CardContent>
@@ -242,7 +431,7 @@ export default function DashboardPage() {
                     {/* Orders */}
                     <div>
                         <h2 className='text-2xl font-semibold text-white mb-6'>
-                            Recent Orders
+                            {isAdmin ? 'All Orders' : 'Recent Orders'}
                         </h2>
 
                         {isLoading ? (
@@ -282,21 +471,49 @@ export default function DashboardPage() {
                                                                 <div className='font-mono text-sm text-violet-400 mb-1'>
                                                                     {order.id.slice(0, 8).toUpperCase()}
                                                                 </div>
-                                                                <div className='text-xs text-neutral-400'>
+                                                                <div className='text-xs text-neutral-500'>
                                                                     {new Date(order.createdAt).toLocaleDateString()}
                                                                 </div>
                                                             </div>
                                                             <Badge variant='outline' className={statusConfig.className}>
                                                                 {statusConfig.label}
                                                             </Badge>
+                                                            {/* Admin: show user info */}
+                                                            {isAdmin && order.userId && (
+                                                                <span className='text-xs text-neutral-600'>
+                                                                    User: {order.userId.slice(0, 8)}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <div className='text-right'>
-                                                            <div className='text-xl font-bold text-white'>
-                                                                R$ {order.totalAmount.toFixed(2)}
+                                                        <div className='flex items-center gap-4'>
+                                                            <div className='text-right'>
+                                                                <div className='text-xl font-bold text-white'>
+                                                                    R$ {formatPrice(order.totalAmount)}
+                                                                </div>
+                                                                <div className='text-sm text-neutral-400'>
+                                                                    {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'item' : 'items'}
+                                                                </div>
                                                             </div>
-                                                            <div className='text-sm text-neutral-400'>
-                                                                {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'item' : 'items'}
-                                                            </div>
+                                                            {/* Admin: status management */}
+                                                            {isAdmin && order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && (
+                                                                <select
+                                                                    value=''
+                                                                    onChange={(e) => {
+                                                                        e.stopPropagation()
+                                                                        if (e.target.value) updateOrderStatus(order.id, e.target.value)
+                                                                    }}
+                                                                    disabled={updatingOrder === order.id}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className='bg-neutral-800 border border-neutral-700 rounded-lg p-2 text-xs text-white'
+                                                                >
+                                                                    <option value=''>Update status</option>
+                                                                    {order.status === 'PENDING' && <option value='AWAITING_PAYMENT'>→ Awaiting Payment</option>}
+                                                                    {(order.status === 'PENDING' || order.status === 'AWAITING_PAYMENT') && <option value='PAID'>→ Paid</option>}
+                                                                    {order.status === 'PAID' && <option value='PROCESSING'>→ Processing</option>}
+                                                                    {(order.status === 'PAID' || order.status === 'PROCESSING') && <option value='DELIVERED'>→ Delivered</option>}
+                                                                    <option value='CANCELLED'>→ Cancelled</option>
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -305,7 +522,6 @@ export default function DashboardPage() {
                                                 {selectedOrder === order.id && (
                                                     <div className='border-t border-neutral-800 p-6'>
                                                         <div className='space-y-4'>
-                                                            {/* Order items */}
                                                             {order.items?.map((item, itemIndex) => (
                                                                 <div
                                                                     key={item.id}
@@ -319,11 +535,11 @@ export default function DashboardPage() {
                                                                             {item.product?.name || `Product ${itemIndex + 1}`}
                                                                         </div>
                                                                         <div className='text-xs text-neutral-500 mt-1'>
-                                                                            Qty: {item.quantity} × R$ {item.unitPrice.toFixed(2)}
+                                                                            Qty: {item.quantity} × R$ {formatPrice(item.unitPrice)}
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* Keys for this product */}
+                                                                    {/* Keys */}
                                                                     {orderKeys[order.id] && (
                                                                         <div className='flex items-center gap-3'>
                                                                             {orderKeys[order.id]
@@ -334,20 +550,20 @@ export default function DashboardPage() {
                                                                                             {keyItem.key}
                                                                                         </span>
                                                                                         <Button
-                                                                                            size='sm'
-                                                                                            variant='outline'
-                                                                                            className='border-neutral-700 hover:bg-neutral-800'
-                                                                                            onClick={(e) => {
-                                                                                                e.stopPropagation()
-                                                                                                copyToClipboard(keyItem.key, `${order.id}-${ki}`)
-                                                                                            }}
-                                                                                        >
-                                                                                            {copiedKey === `${order.id}-${ki}` ? (
-                                                                                                <CheckCircle2 className='w-4 h-4 text-emerald-400' />
-                                                                                            ) : (
-                                                                                                <Copy className='w-4 h-4' />
-                                                                                            )}
-                                                                                        </Button>
+                                                                                                                            size='sm'
+                                                                                                                            variant='outline'
+                                                                                                                            className='border-neutral-700 hover:bg-neutral-800'
+                                                                                                                            onClick={(e) => {
+                                                                                                                                e.stopPropagation()
+                                                                                                                                copyToClipboard(keyItem.key, `${order.id}-${ki}`)
+                                                                                                                            }}
+                                                                                                                        >
+                                                                                                                            {copiedKey === `${order.id}-${ki}` ? (
+                                                                                                                                <CheckCircle2 className='w-4 h-4 text-emerald-400' />
+                                                                                                                            ) : (
+                                                                                                                                <Copy className='w-4 h-4' />
+                                                                                                                            )}
+                                                                                                                        </Button>
                                                                                     </div>
                                                                                 ))}
                                                                         </div>
@@ -355,7 +571,6 @@ export default function DashboardPage() {
                                                                 </div>
                                                             ))}
 
-                                                            {/* Load keys button for delivered orders */}
                                                             {order.status === 'DELIVERED' && !orderKeys[order.id] && (
                                                                 <Button
                                                                     variant='outline'
