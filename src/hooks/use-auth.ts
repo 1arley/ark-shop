@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
+import { useCartStore } from '@/stores/cart-store'
 import { apiClient } from '@/services/api'
 import { extractApiError } from '@/lib/utils'
 
@@ -84,8 +85,11 @@ export function useAuth() {
   )
 
   const logout = useCallback(() => {
+    // Notify backend to revoke refresh token (fire-and-forget)
+    apiClient.auth.logout().catch(() => {})
     apiClient.clearAuth()
     logoutStore()
+    useCartStore.getState().clearCart() // Clear cart from previous user
   }, [logoutStore])
 
   return {

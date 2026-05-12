@@ -5,11 +5,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, Search, Menu, X, User, LogOut } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, User, LogOut, Settings, Bell, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
+import { apiClient } from '@/services/api'
 
 interface HeaderProps {
   className?: string
@@ -24,6 +25,9 @@ export default function Header(_props: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [scrolled, setScrolled] = React.useState(false)
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => { setMounted(true) }, [])
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +36,29 @@ export default function Header(_props: HeaderProps) {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const [unreadCount, setUnreadCount] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!isAuthenticated) return
+
+    const fetchUnread = async () => {
+      try {
+        const res = await apiClient.notifications.countUnread()
+        setUnreadCount(res.data.count)
+      } catch { /* ignore */ }
+    }
+
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 60000)
+    const onFocus = () => fetchUnread()
+    window.addEventListener('focus', onFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [isAuthenticated])
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -108,12 +135,29 @@ export default function Header(_props: HeaderProps) {
         {/* Auth Buttons — Desktop */}
         {isAuthenticated ? (
           <div className='hidden md:flex items-center gap-1'>
+            {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
+              <Link
+                href='/admin'
+                className='flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors mr-1'
+                title='Admin Panel'
+              >
+                <Settings className='w-3.5 h-3.5' />
+                Admin
+              </Link>
+            )}
             <Link
               href='/dashboard'
               className='flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-600/20 border border-violet-600/30 text-violet-300 text-sm font-medium hover:bg-violet-600/30 transition-colors'
             >
               <User className='w-4 h-4' />
               {user?.name?.split(' ')[0] || 'Dashboard'}
+            </Link>
+            <Link
+              href='/profile'
+              className='p-2 text-slate-400 hover:text-white transition-colors'
+              title='Profile Settings'
+            >
+              <Edit3 className='w-4 h-4' />
             </Link>
             <button
               onClick={handleLogout}
@@ -140,6 +184,28 @@ export default function Header(_props: HeaderProps) {
           </div>
         )}
 
+        {/* Notifications */}
+        {isAuthenticated && (
+          <Link
+            href={user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) ? '/admin/notifications' : '#'}
+            className='relative p-2 text-neutral-300 hover:text-white transition-colors'
+            onClick={(e) => {
+              if (!user?.role || !['ADMIN', 'SUPERADMIN'].includes(user.role)) {
+                e.preventDefault()
+              }
+            }}
+          >
+            <Bell className='w-5 h-5' />
+            <span
+              className={`absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-medium rounded-full flex items-center justify-center transition-all duration-300 ${
+                mounted && unreadCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+              }`}
+            >
+              {mounted ? (unreadCount > 99 ? '99+' : unreadCount) : 0}
+            </span>
+          </Link>
+        )}
+
         {/* Cart */}
         <Link
           href='/cart'
@@ -154,10 +220,10 @@ export default function Header(_props: HeaderProps) {
           {/* Always render badge to prevent hydration mismatch; hide via CSS when 0 */}
           <span
             className={`absolute -top-1 -right-1 w-5 h-5 bg-violet-600 text-white text-xs font-medium rounded-full flex items-center justify-center transition-all duration-300 ${
-              cartCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+              mounted && cartCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
             }`}
           >
-            {cartCount}
+            {mounted ? cartCount : 0}
           </span>
         </Link>
 
@@ -211,6 +277,16 @@ export default function Header(_props: HeaderProps) {
             <div className='border-t border-neutral-800 pt-2 mt-2'>
               {isAuthenticated ? (
                 <>
+                  {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
+                    <Link
+                      href='/admin'
+                      className='flex items-center gap-3 px-3 py-2 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Settings className='w-4 h-4' />
+                      <span className='text-sm'>Admin Panel</span>
+                    </Link>
+                  )}
                   <Link
                     href='/dashboard'
                     className='flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
@@ -218,6 +294,14 @@ export default function Header(_props: HeaderProps) {
                   >
                     <User className='w-4 h-4' />
                     <span className='text-sm'>{user?.name || 'Dashboard'}</span>
+                  </Link>
+                  <Link
+                    href='/profile'
+                    className='flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Edit3 className='w-4 h-4' />
+                    <span className='text-sm'>Profile</span>
                   </Link>
                   <button
                     onClick={() => { handleLogout(); setIsMobileMenuOpen(false) }}

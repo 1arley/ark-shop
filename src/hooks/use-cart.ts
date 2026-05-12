@@ -46,7 +46,14 @@ export function useCart() {
 
   // Auto-fetch server cart on mount if user is authenticated
   const fetched = useRef(false)
+  const prevAuth = useRef(isAuthenticated)
+
   useEffect(() => {
+    // Reset fetched flag when auth state changes (logout → login different user)
+    if (prevAuth.current !== isAuthenticated) {
+      fetched.current = false
+      prevAuth.current = isAuthenticated
+    }
     if (fetched.current) return
     fetched.current = true
     if (!isAuthenticated) return
