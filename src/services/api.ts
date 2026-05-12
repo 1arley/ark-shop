@@ -1,11 +1,16 @@
 import { env } from '@/lib/env'
 import type {
   AuthResponse,
+  AuthUser,
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
+  UpdateProfilePayload,
   Product,
   ProductListParams,
   Category,
+  CreateCategoryPayload,
+  UpdateCategoryPayload,
   ApiCart,
   Order,
   CreateOrderPayload,
@@ -14,6 +19,19 @@ import type {
   DeliveredKey,
   DashboardStats,
   PaginatedResponse,
+  PaginatedResponseMeta,
+  AdminUser,
+  AdminUpdateUserPayload,
+  GameKey,
+  KeyStats,
+  BatchImportResult,
+  Notification,
+  Seller,
+  CreateSellerPayload,
+  UpdateSellerPayload,
+  FraudLog,
+  SystemHealth,
+  UploadResponse,
 } from '@/types/api'
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
@@ -41,6 +59,14 @@ class ApiClientClass {
 
   constructor() {
     this.baseURL = env.NEXT_PUBLIC_API_URL
+    // Auto-restore tokens from localStorage so API calls work immediately
+    // even before the React auth sync runs
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('auth_token')
+      if (stored) this.token = stored
+      const storedRefresh = localStorage.getItem('auth_refresh_token')
+      if (storedRefresh) this.refreshToken = storedRefresh
+    }
   }
 
   setToken(token: string | null) {
@@ -99,10 +125,13 @@ class ApiClientClass {
     this.isRefreshing = true
 
     try {
+      // Backend expects refresh token in Authorization Bearer header, not in body
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`,
+        },
       })
 
       if (!response.ok) {
@@ -218,13 +247,26 @@ class ApiClientClass {
         status: response.status,
       }
     } catch (error) {
-      if (error instanceof Error && 'status' in error) {
+      // Re-throw if it's already a typed ApiError (has status and code)
+      if (
+        error &&
+        typeof error === 'object' &&
+        'status' in error &&
+        'code' in error
+      ) {
         throw error
       }
 
+      // If it has a status but not code, it's still an ApiError-like
+      if (error && typeof error === 'object' && 'status' in error) {
+        throw error
+      }
+
+      const networkErrorMessage =
+        error instanceof Error ? error.message : 'Network error. Please check your connection.'
       const networkError: ApiError = {
         name: 'NetworkError',
-        message: 'Network error. Please check your connection.',
+        message: networkErrorMessage,
         status: 0,
         code: 'NETWORK_ERROR',
       }
@@ -279,8 +321,37 @@ class ApiClientClass {
     register: (payload: RegisterPayload) =>
       this.post<AuthResponse>('/auth/register', payload as unknown as Record<string, unknown>),
 
-    refresh: (refreshToken: string) =>
-      this.post<AuthResponse>('/auth/refresh', { refresh_token: refreshToken }),
+    refresh: async (refreshToken: string) => {
+      // Backend expects refresh token in Authorization Bearer header, not in body
+      const response = await fetch(`${apiClient['baseURL']}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`,
+        },
+      })
+      const data = await response.json()
+      return { data, status: response.status }
+    },
+
+    logout: () =>
+      this.post<{ message: string }>('/auth/logout', undefined, { requiresAuth: true }),
+
+    forgotPassword: (email: string) =>
+      this.post<{ message: string }>('/auth/forgot-password', { email }),
+
+    resetPassword: (payload: ResetPasswordPayload) =>
+      this.post<{ message: string }>('/auth/reset-password', payload as unknown as Record<string, unknown>),
+  }
+
+  // --- User Profile ---
+
+  user = {
+    getMe: () =>
+      this.get<AuthUser>('/user/me', { requiresAuth: true }),
+
+    updateMe: (data: UpdateProfilePayload) =>
+      this.patch<AuthUser>('/user/me', data as unknown as Record<string, unknown>, { requiresAuth: true }),
   }
 
   // --- Products ---
@@ -328,6 +399,9 @@ class ApiClientClass {
 
     clear: () =>
       this.delete<void>('/cart', { requiresAuth: true }),
+
+    getCount: () =>
+      this.get<{ count: number }>('/cart/count', { requiresAuth: true }),
   }
 
   // --- Orders ---
@@ -367,12 +441,15 @@ class ApiClientClass {
       this.get<Payment>(`/payments/order/${orderId}`, { requiresAuth: true }),
   }
 
-  // --- Admin ---
+  // ============================================================
+  // Admin API Methods
+  // ============================================================
 
   admin = {
     dashboard: () =>
       this.get<DashboardStats>('/admin/dashboard', { requiresAuth: true }),
 
+    // --- Products ---
     listProducts: (params?: { page?: number; limit?: number; search?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
@@ -391,6 +468,7 @@ class ApiClientClass {
     deleteProduct: (id: string) =>
       this.delete<void>(`/admin/products/${id}`, { requiresAuth: true }),
 
+    // --- Orders ---
     listOrders: (params?: { page?: number; limit?: number; status?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
@@ -403,6 +481,7 @@ class ApiClientClass {
     updateOrderStatus: (id: string, status: string) =>
       this.patch<Order>(`/admin/orders/${id}/status`, { status }, { requiresAuth: true }),
 
+    // --- Keys ---
     addKeys: (productId: string, keys: string[]) =>
       this.post<{ count: number }>(`/admin/products/${productId}/keys`, { keys }, { requiresAuth: true }),
 
@@ -412,8 +491,220 @@ class ApiClientClass {
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.productId) searchParams.set('productId', params.productId)
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<{ id: string; key: string; status: string; product: { name: string } }>>(`/admin/keys${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<GameKey>>(`/admin/keys${query ? `?${query}` : ''}`, { requiresAuth: true })
     },
+
+    bulkImportKeys: (productId: string, keysText: string, isCsv?: boolean) =>
+      this.post<BatchImportResult>('/admin/keys/import', { productId, keysText, isCsv } as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    // --- Users ---
+    listUsers: (params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<PaginatedResponseMeta<AdminUser>>(`/admin/users${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    getUser: (id: string) =>
+      this.get<AdminUser>(`/admin/users/${id}`, { requiresAuth: true }),
+
+    updateUser: (id: string, data: AdminUpdateUserPayload) =>
+      this.patch<AdminUser>(`/admin/users/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    deleteUser: (id: string) =>
+      this.delete<void>(`/admin/users/${id}`, { requiresAuth: true }),
+
+    // --- Fraud Logs ---
+    getFraudLogs: (params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<PaginatedResponseMeta<FraudLog>>(`/admin/fraud-logs${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    // --- System Health ---
+    getSystemHealth: () =>
+      this.get<SystemHealth>('/admin/health', { requiresAuth: true }),
+
+    // --- Demo Data ---
+    generateDemoData: (productsCount?: number, keysPerProduct?: number) =>
+      this.post<{ categories: number; products: number; keys: number }>('/admin/generate-demo', { productsCount, keysPerProduct } as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    clearDemoData: (confirmationToken: string) =>
+      this.post<{ message: string }>('/admin/clear-demo', { confirmationToken }, { requiresAuth: true }),
+  }
+
+  // --- Categories (Admin CRUD) ---
+
+  categoriesAdmin = {
+    list: () =>
+      this.get<Category[]>('/categories'),
+
+    create: (data: CreateCategoryPayload) =>
+      this.post<Category>('/categories', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    update: (id: string, data: UpdateCategoryPayload) =>
+      this.patch<Category>(`/categories/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    delete: (id: string) =>
+      this.delete<void>(`/categories/${id}`, { requiresAuth: true }),
+  }
+
+  // --- Keys (Admin individual management) ---
+
+  keysAdmin = {
+    getProductKeys: (productId: string, params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<GameKey[]>(`/keys/product/${productId}${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    getKeyStats: (productId: string) =>
+      this.get<KeyStats>(`/keys/stats/${productId}`, { requiresAuth: true }),
+
+    getKey: (id: string) =>
+      this.get<GameKey>(`/keys/${id}`, { requiresAuth: true }),
+
+    updateKey: (id: string, data: { keyData?: string; status?: string }) =>
+      this.patch<GameKey>(`/keys/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    deleteKey: (id: string) =>
+      this.delete<void>(`/keys/${id}`, { requiresAuth: true }),
+
+    generateDemoKeys: (productId: string, quantity?: number) =>
+      this.post<{ count: number }>('/keys/generate-demo', { productId, quantity }, { requiresAuth: true }),
+  }
+
+  // --- Orders (Extended) ---
+
+  ordersAdmin = {
+    deliverOrder: (id: string) =>
+      this.post<Order>(`/orders/${id}/deliver`, undefined, { requiresAuth: true }),
+
+    getRecentOrders: (limit?: number) =>
+      this.get<Order[]>(`/orders/recent?limit=${limit || 10}`, { requiresAuth: true }),
+
+    updateStatus: (id: string, status: string) =>
+      this.patch<Order>(`/orders/${id}/status`, { status }, { requiresAuth: true }),
+  }
+
+  // --- Payments (Extended) ---
+
+  paymentsAdmin = {
+    refundPayment: (id: string, amount?: number) =>
+      this.post<Payment>(`/payments/${id}/refund`, amount ? { amount } : undefined, { requiresAuth: true }),
+
+    getUserPayments: (userId: string, params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<Payment[]>(`/payments/user/${userId}${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+  }
+
+  // --- Notifications ---
+
+  notifications = {
+    list: (params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<PaginatedResponse<Notification>>(`/notifications${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    countUnread: () =>
+      this.get<{ count: number }>('/notifications/unread/count', { requiresAuth: true }),
+
+    getById: (id: string) =>
+      this.get<Notification>(`/notifications/${id}`, { requiresAuth: true }),
+
+    markAsRead: (id: string) =>
+      this.patch<Notification>(`/notifications/${id}/read`, undefined, { requiresAuth: true }),
+
+    markAllAsRead: () =>
+      this.patch<{ message: string }>('/notifications/read-all', undefined, { requiresAuth: true }),
+  }
+
+  // --- Sellers ---
+
+  sellers = {
+    create: (data: CreateSellerPayload) =>
+      this.post<Seller>('/sellers', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    list: (params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<Seller[]>(`/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    getById: (id: string) =>
+      this.get<Seller>(`/sellers/${id}`, { requiresAuth: true }),
+
+    update: (id: string, data: UpdateSellerPayload) =>
+      this.patch<Seller>(`/sellers/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    delete: (id: string) =>
+      this.delete<void>(`/sellers/${id}`, { requiresAuth: true }),
+  }
+
+  // --- Contact ---
+
+  contact = {
+    submit: (data: { name: string; email: string; subject: string; message: string }) =>
+      this.post<{ message: string }>('/contact', data as unknown as Record<string, unknown>),
+  }
+
+  // --- Upload ---
+
+  upload = {
+    single: async (file: File, folder?: string) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (folder) formData.append('folder', folder)
+
+      const token = this.getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const response = await fetch(`${this.baseURL}/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      const data = await response.json()
+      if (!response.ok) throw { name: 'ApiError', message: data.message || `HTTP ${response.status}`, status: response.status, code: data.code || 'UPLOAD_ERROR' }
+      return { data, status: response.status } as ApiResponse<UploadResponse>
+    },
+
+    multiple: async (files: File[], folder?: string) => {
+      const formData = new FormData()
+      files.forEach(f => formData.append('files', f))
+      if (folder) formData.append('folder', folder)
+
+      const token = this.getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const response = await fetch(`${this.baseURL}/upload/multiple`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      const data = await response.json()
+      if (!response.ok) throw { name: 'ApiError', message: data.message || `HTTP ${response.status}`, status: response.status, code: data.code || 'UPLOAD_ERROR' }
+      return { data, status: response.status } as ApiResponse<UploadResponse[]>
+    },
+
+    delete: (key: string) =>
+      this.delete<void>(`/upload/${key}`, { requiresAuth: true }),
   }
 }
 

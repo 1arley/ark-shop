@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string
   name: string
   role: 'USER' | 'ADMIN' | 'SUPERADMIN'
+  avatarUrl?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -67,6 +68,18 @@ export interface Category {
   }
 }
 
+export interface CreateCategoryPayload {
+  name: string
+  description?: string
+  parentId?: string
+}
+
+export interface UpdateCategoryPayload {
+  name?: string
+  description?: string
+  parentId?: string
+}
+
 // --- Cart ---
 
 export interface ApiCartItem {
@@ -109,9 +122,10 @@ export interface Order {
   id: string
   userId: string
   status: OrderStatus
-  totalAmount: number
+  total: number
   items: OrderItem[]
   payments?: Payment[]
+  user?: { id: string; name: string; email: string }
   createdAt: string
   updatedAt: string
 }
@@ -138,6 +152,7 @@ export interface Payment {
   status: PaymentStatus
   externalId: string | null
   pixQrCode: string | null
+  pixCode: string | null
   pixCopyPaste: string | null
   expiresAt: string | null
   createdAt: string
@@ -148,6 +163,8 @@ export interface CreatePaymentPayload {
   amount: number
   provider: PaymentProvider
   method: PaymentMethod
+  payerCpf?: string
+  payerBirthDate?: string
 }
 
 // --- Keys ---
@@ -157,7 +174,147 @@ export interface DeliveredKey {
   key: string
 }
 
-// --- Admin Dashboard ---
+export interface GameKey {
+  id: string
+  productId: string
+  keyData: string
+  status: 'AVAILABLE' | 'RESERVED' | 'DELIVERED' | 'ARCHIVED'
+  createdAt: string
+  updatedAt: string
+  product?: { id: string; name: string }
+}
+
+export interface KeyStats {
+  total: number
+  available: number
+  reserved: number
+  delivered: number
+  archived: number
+}
+
+export interface BatchImportResult {
+  imported: number
+  errors?: string[]
+}
+
+// --- Users (Admin) ---
+
+export interface AdminUser {
+  id: string
+  email: string
+  name: string
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN'
+  avatarUrl: string | null
+  createdAt: string
+  updatedAt: string
+  _count?: {
+    orders: number
+    payments: number
+  }
+}
+
+export interface AdminUpdateUserPayload {
+  name?: string
+  email?: string
+  role?: string
+  avatarUrl?: string
+}
+
+// --- Notifications ---
+
+export interface Notification {
+  id: string
+  userId: string
+  type: 'EMAIL' | 'DISCORD' | 'TELEGRAM' | 'WEBHOOK'
+  status: 'PENDING' | 'SENT' | 'FAILED'
+  subject: string
+  content: string
+  metadata?: Record<string, unknown>
+  sentAt: string | null
+  readAt: string | null
+  createdAt: string
+}
+
+// --- Sellers ---
+
+export interface Seller {
+  id: string
+  userId: string
+  companyName: string
+  document: string
+  commission: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  user?: { id: string; name: string; email: string }
+}
+
+export interface CreateSellerPayload {
+  userId: string
+  companyName: string
+  document: string
+  commission?: number
+  isActive?: boolean
+}
+
+export interface UpdateSellerPayload {
+  companyName?: string
+  document?: string
+  commission?: number
+  isActive?: boolean
+}
+
+// --- Fraud ---
+
+export interface FraudLog {
+  id: string
+  userId: string
+  orderId: string | null
+  riskScore: number
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  checks: Record<string, unknown>
+  ipAddress: string | null
+  deviceFingerprint: string | null
+  decision: string
+  reason: string | null
+  createdAt: string
+}
+
+// --- System Health ---
+
+export interface SystemHealth {
+  database: string
+  products: number
+  orders: number
+  payments: number
+  timestamp: string
+}
+
+// --- Upload ---
+
+export interface UploadResponse {
+  url: string
+  key: string
+  filename: string
+}
+
+// --- Admin Dashboard (Expanded) ---
+
+// --- User Profile (for update) ---
+
+export interface UpdateProfilePayload {
+  name?: string
+  email?: string
+  avatarUrl?: string
+}
+
+// --- Reset Password ---
+
+export interface ResetPasswordPayload {
+  token: string
+  email: string
+  password: string
+}
 
 export interface DashboardStats {
   revenue: {
@@ -185,6 +342,19 @@ export interface DashboardStats {
     reserved: number
     delivered: number
   }
+  users: {
+    total: number
+    activeToday: number
+  }
+  payments: {
+    total: number
+    pending: number
+    approved: number
+    rejected: number
+    refunded: number
+  }
+  recentOrders: Order[]
+  topProducts: Product[]
 }
 
 // --- Pagination ---
@@ -195,6 +365,16 @@ export interface PaginatedResponse<T> {
   page: number
   limit: number
   totalPages: number
+}
+
+export interface PaginatedResponseMeta<T> {
+  data: T[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
 }
 
 // --- Generic API Error ---
