@@ -20,6 +20,14 @@ import {
     TrendingUp,
     Clock,
     DollarSign,
+    Shield,
+    Users,
+    Store,
+    Bell,
+    Activity,
+    Tags,
+    Settings,
+    X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -154,11 +162,20 @@ export default function DashboardPage() {
         setUpdatingOrder(null)
     }
 
+    const handleCancelOrder = async (orderId: string) => {
+        setUpdatingOrder(orderId)
+        try {
+            await apiClient.orders.cancel(orderId)
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'CANCELLED' as OrderStatus } : o))
+        } catch (err) { console.error('Failed to cancel order:', err) }
+        setUpdatingOrder(null)
+    }
+
     const stats = [
         { label: 'Total Orders', value: String(orders.length), icon: Package },
         {
             label: 'Total Spent',
-            value: `R$ ${formatPrice(orders.reduce((sum, o) => sum + Number(o.totalAmount), 0))}`,
+            value: `R$ ${formatPrice(orders.reduce((sum, o) => sum + Number(o.total), 0))}`,
             icon: CreditCard,
         },
         {
@@ -277,7 +294,7 @@ export default function DashboardPage() {
                                                 <div className='text-xs text-neutral-500'>Inactive</div>
                                             </div>
                                         </div>
-                                        <Link href='/products'>
+                                        <Link href='/admin/products'>
                                             <Button variant='outline' size='sm' className='w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800'>
                                                 <Edit2 className='w-3.5 h-3.5 mr-2' />
                                                 Manage Products
@@ -310,7 +327,7 @@ export default function DashboardPage() {
                                                 <div className='text-xs text-neutral-500'>Delivered</div>
                                             </div>
                                         </div>
-                                        <Link href='/products'>
+                                        <Link href='/admin/keys'>
                                             <Button variant='outline' size='sm' className='w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800'>
                                                 <Plus className='w-3.5 h-3.5 mr-2' />
                                                 Add Keys to Product
@@ -384,6 +401,49 @@ export default function DashboardPage() {
                             </motion.div>
                         ))}
                     </div>
+
+                    {/* Admin Quick Links */}
+                    {isAdmin && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.25 }}
+                            className='mb-12'
+                        >
+                            <h2 className='text-xl font-semibold text-white mb-4 flex items-center gap-2'>
+                                <Settings className='w-5 h-5 text-amber-400' />
+                                Admin Panel
+                            </h2>
+                            <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3'>
+                                {[
+                                    { href: '/admin', label: 'Dashboard', icon: BarChart3, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+                                    { href: '/admin/users', label: 'Users', icon: Users, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
+                                    { href: '/admin/categories', label: 'Categories', icon: Tags, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+                                    { href: '/admin/keys', label: 'Keys', icon: Key, color: 'text-sky-400 bg-sky-500/10 border-sky-500/20' },
+                                    { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+                                    { href: '/admin/sellers', label: 'Sellers', icon: Store, color: 'text-pink-400 bg-pink-500/10 border-pink-500/20' },
+                                    { href: '/admin/notifications', label: 'Notifications', icon: Bell, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
+                                    { href: '/admin/fraud', label: 'Fraud', icon: Shield, color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+                                    { href: '/admin/health', label: 'Health', icon: Activity, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+                                ].map((item) => (
+                                    <Link key={item.href} href={item.href}>
+                                        <Card className='bg-neutral-900/50 border-neutral-800 hover:bg-neutral-800/50 transition-all group cursor-pointer h-full'>
+                                            <CardContent className='p-4'>
+                                                <div className='flex flex-col items-center gap-2 text-center'>
+                                                    <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center border`}>
+                                                        <item.icon className='w-5 h-5' />
+                                                    </div>
+                                                    <span className='text-xs font-medium text-neutral-400 group-hover:text-white transition-colors'>
+                                                        {item.label}
+                                                    </span>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
 
                     {/* Quick Actions */}
                     <div className='grid md:grid-cols-2 gap-6 mb-12'>
@@ -488,7 +548,7 @@ export default function DashboardPage() {
                                                         <div className='flex items-center gap-4'>
                                                             <div className='text-right'>
                                                                 <div className='text-xl font-bold text-white'>
-                                                                    R$ {formatPrice(order.totalAmount)}
+                                                                    R$ {formatPrice(order.total)}
                                                                 </div>
                                                                 <div className='text-sm text-neutral-400'>
                                                                     {order.items?.length || 0} {(order.items?.length || 0) === 1 ? 'item' : 'items'}
@@ -513,6 +573,28 @@ export default function DashboardPage() {
                                                                     {(order.status === 'PAID' || order.status === 'PROCESSING') && <option value='DELIVERED'>→ Delivered</option>}
                                                                     <option value='CANCELLED'>→ Cancelled</option>
                                                                 </select>
+                                                            )}
+
+                                                            {/* User: cancel button for cancellable orders */}
+                                                            {!isAdmin && (order.status === 'PENDING' || order.status === 'AWAITING_PAYMENT') && (
+                                                                <Button
+                                                                    size='sm'
+                                                                    variant='outline'
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        if (confirm('Are you sure you want to cancel this order?')) {
+                                                                            handleCancelOrder(order.id)
+                                                                        }
+                                                                    }}
+                                                                    disabled={updatingOrder === order.id}
+                                                                    className='border-red-500/30 text-red-400 hover:bg-red-500/10'
+                                                                >
+                                                                    {updatingOrder === order.id
+                                                                        ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                                                                        : <X className='w-3.5 h-3.5' />
+                                                                    }
+                                                                    Cancel
+                                                                </Button>
                                                             )}
                                                         </div>
                                                     </div>

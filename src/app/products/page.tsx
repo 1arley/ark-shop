@@ -30,7 +30,7 @@ import { apiClient } from '@/services/api'
 import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { formatPrice, extractApiError } from '@/lib/utils'
-import type { Product, Category } from '@/types/api'
+import type { Product, Category, ProductListParams } from '@/types/api'
 
 function ProductsPageContent() {
     const searchParams = useSearchParams()
@@ -92,14 +92,16 @@ function ProductsPageContent() {
                 isActive: isAdmin ? undefined : true, // Admin sees all products
                 limit: 50,
             }
-            const response = await apiClient.products.list(params as any)
+            const response = await apiClient.products.list(params as ProductListParams)
             const data = response.data
             if (Array.isArray(data)) {
                 setProducts(data)
                 setTotalProducts(data.length)
             } else {
                 setProducts(data.data || [])
-                setTotalProducts(data.total || 0)
+                // Backend returns pagination inside meta, not at top level
+                const paginated = data as { data: Product[]; meta?: { total: number } }
+                setTotalProducts(paginated.meta?.total ?? 0)
             }
         } catch {
             setProducts([])
