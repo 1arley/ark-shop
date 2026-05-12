@@ -95,7 +95,7 @@ function ResetPasswordForm() {
   return (
     <div className='min-h-screen bg-neutral-950'>
       <Header />
-      <section className='relative pt-24 pb-12 bg-neutral-900'>
+      <section className='relative pt-28 pb-16 bg-neutral-900'>
         <div className='absolute inset-0'><div className='absolute top-20 left-0 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl' /></div>
         <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
           <h1 className='text-4xl font-bold text-white'>Reset Password</h1>

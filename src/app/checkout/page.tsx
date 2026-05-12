@@ -134,7 +134,7 @@ export default function CheckoutPage() {
         return (
             <div className='min-h-screen bg-neutral-950'>
                 <Header />
-                <section className='relative pt-24 pb-12'>
+                <section className='relative pt-28 pb-16'>
                     <div className='max-w-2xl mx-auto px-4 sm:px-6 lg:px-8'>
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -198,7 +198,7 @@ export default function CheckoutPage() {
         return (
             <div className='min-h-screen bg-neutral-950'>
                 <Header />
-                <section className='relative pt-24 pb-12'>
+                <section className='relative pt-28 pb-16'>
                     <div className='max-w-2xl mx-auto px-4 sm:px-6 lg:px-8'>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -298,7 +298,7 @@ export default function CheckoutPage() {
             <Header />
 
             {/* Header */}
-            <section className='relative py-12 bg-neutral-900 border-b border-neutral-800'>
+            <section className='relative pt-28 pb-12 bg-neutral-900 border-b border-neutral-800'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

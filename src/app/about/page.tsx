@@ -11,7 +11,7 @@ export default function AboutPage() {
             <Header />
 
             {/* Hero Section */}
-            <section className='relative pt-24 pb-12 bg-gradient-to-br from-indigo-950/40 via-slate-950 to-purple-950/40'>
+            <section className='relative pt-28 pb-16 bg-gradient-to-br from-indigo-950/40 via-slate-950 to-purple-950/40'>
                 <div className='absolute inset-0'>
                     <div className='absolute top-20 left-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl' />
                 </div>

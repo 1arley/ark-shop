@@ -125,7 +125,7 @@ export default function RefundsPage() {
       </section>
 
       {/* Guidelines */}
-      <section className='py-12 bg-neutral-900/30'>
+      <section className='pt-28 pb-12 bg-neutral-900/30'>
         <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
