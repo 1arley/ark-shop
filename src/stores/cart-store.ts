@@ -34,6 +34,9 @@ export const useCartStore = create<CartState>()(
         const currentItems = get().items
         const existingItem = currentItems.find((i) => i.id === item.id)
 
+        // Ensure price is always a number
+        const sanitized = { ...item, price: Number(item.price) || 0 }
+
         if (existingItem) {
           set({
             items: currentItems.map((i) =>
@@ -41,7 +44,7 @@ export const useCartStore = create<CartState>()(
             ),
           })
         } else {
-          set({ items: [...currentItems, { ...item, quantity: 1 }] })
+          set({ items: [...currentItems, { ...sanitized, quantity: 1 }] })
         }
       },
 
@@ -66,7 +69,12 @@ export const useCartStore = create<CartState>()(
       },
 
       setItems: (items) => {
-        set({ items })
+        // Ensure all prices are numbers
+        const sanitized = items.map((item) => ({
+          ...item,
+          price: Number(item.price) || 0,
+        }))
+        set({ items: sanitized })
       },
 
       getItemCount: () => {
