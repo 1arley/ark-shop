@@ -6,6 +6,7 @@ import { ShoppingCart, Package, Plus, Minus, Trash2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCart } from '@/hooks/use-cart'
+import { formatPrice } from '@/lib/utils'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
@@ -118,7 +119,7 @@ export default function CartPage() {
                                                             {/* Price */}
                                                             <div className='text-right'>
                                                                 <span className='text-2xl font-bold text-white'>
-                                                                    R$ {(item.price * item.quantity).toFixed(2)}
+                                                                    R$ {formatPrice(item.price * item.quantity)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -142,7 +143,7 @@ export default function CartPage() {
                                             <div className='space-y-3 mb-6'>
                                                 <div className='flex justify-between text-neutral-400'>
                                                     <span>Subtotal</span>
-                                                    <span>R$ {subtotal.toFixed(2)}</span>
+                                                    <span>R$ {formatPrice(subtotal)}</span>
                                                 </div>
                                                 <div className='flex justify-between text-neutral-400'>
                                                     <span>Delivery</span>
@@ -151,14 +152,12 @@ export default function CartPage() {
                                                 <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                                     <span className='font-semibold text-white'>Total</span>
                                                     <span className='text-2xl font-bold text-white'>
-                                                        R$ {total.toFixed(2)}
+                                                        R$ {formatPrice(total)}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <Button
-                                                className='w-full bg-white text-neutral-950 hover:bg-neutral-200 h-12 font-semibold'
-                                            >
+                                            <Button asChild className='w-full bg-white text-neutral-950 hover:bg-neutral-200 h-12 font-semibold'>
                                                 <Link href='/checkout' className='flex items-center gap-2'>
                                                     <Truck className='w-4 h-4' />
                                                     Proceed to Checkout

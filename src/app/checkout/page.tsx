@@ -20,6 +20,7 @@ import Footer from '@/components/layout/Footer'
 import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { apiClient } from '@/services/api'
+import { formatPrice, extractApiError } from '@/lib/utils'
 import type { Order, Payment } from '@/types/api'
 
 export default function CheckoutPage() {
@@ -101,8 +102,7 @@ export default function CheckoutPage() {
             setPayment(paymentResponse.data)
             setPollingPayment(true)
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create order'
-            setError(message)
+            setError(extractApiError(err, 'Failed to create order'))
         } finally {
             setProcessing(false)
         }
@@ -158,7 +158,7 @@ export default function CheckoutPage() {
                                         <div className='border-t border-neutral-800 pt-4'>
                                             <div className='flex justify-between items-center'>
                                                 <span className='text-neutral-400'>Total Paid</span>
-                                                <span className='text-2xl font-bold text-white'>R$ {order.totalAmount.toFixed(2)}</span>
+                                                <span className='text-2xl font-bold text-white'>R$ {formatPrice(order.totalAmount)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -166,10 +166,10 @@ export default function CheckoutPage() {
                             </Card>
 
                             <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-                                <Button size='lg' className='bg-white text-neutral-950 hover:bg-neutral-200 h-12'>
+                                <Button asChild size='lg' className='bg-white text-neutral-950 hover:bg-neutral-200 h-12'>
                                     <Link href='/dashboard'>View in Dashboard</Link>
                                 </Button>
-                                <Button
+                                <Button asChild
                                     size='lg'
                                     variant='outline'
                                     className='border-neutral-700 hover:bg-neutral-800 h-12 text-neutral-300'
@@ -260,7 +260,7 @@ export default function CheckoutPage() {
                                         <div className='flex justify-between items-center'>
                                             <span className='text-neutral-400'>Amount</span>
                                             <span className='text-2xl font-bold text-white'>
-                                                R$ {payment.amount.toFixed(2)}
+                                                R$ {formatPrice(payment.amount)}
                                             </span>
                                         </div>
                                     </div>
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
                                                     <div className='text-xs text-neutral-500 mt-1'>Qty: {item.quantity}</div>
                                                 </div>
                                                 <div className='text-right'>
-                                                    <div className='text-white font-medium'>R$ {(item.price * item.quantity).toFixed(2)}</div>
+                                                    <div className='text-white font-medium'>R$ {formatPrice(item.price * item.quantity)}</div>
                                                 </div>
                                             </div>
                                         ))}
@@ -395,7 +395,7 @@ export default function CheckoutPage() {
                                     <div className='space-y-3 mb-6'>
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Subtotal</span>
-                                            <span>R$ {subtotal.toFixed(2)}</span>
+                                            <span>R$ {formatPrice(subtotal)}</span>
                                         </div>
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Delivery</span>
@@ -403,7 +403,7 @@ export default function CheckoutPage() {
                                         </div>
                                         <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                             <span className='font-semibold text-white'>Total</span>
-                                            <span className='text-2xl font-bold text-white'>R$ {total.toFixed(2)}</span>
+                                            <span className='text-2xl font-bold text-white'>R$ {formatPrice(total)}</span>
                                         </div>
                                     </div>
 
