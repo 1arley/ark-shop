@@ -240,7 +240,7 @@ function ProductsPageContent() {
       <Header />
 
             {/* Hero Section */}
-            <section className='relative py-20 bg-neutral-900 overflow-hidden'>
+            <section className='relative pt-28 pb-16 bg-neutral-900 overflow-hidden'>
                 <div className='absolute inset-0'>
                     <div className='absolute top-20 left-0 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl' />
                     <div className='absolute bottom-0 right-0 w-96 h-96 bg-sky-600/5 rounded-full blur-3xl' />
