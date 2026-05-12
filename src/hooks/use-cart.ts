@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useCartStore } from '@/stores/cart-store'
 import type { CartItem } from '@/stores/cart-store'
 import { apiClient } from '@/services/api'
@@ -44,8 +44,16 @@ export function useCart() {
     }
   }, [isAuthenticated, items, setItems])
 
-  // Fetch cart from server (for authenticated users)
-  const fetchCart = useCallback(async () => {
+  // Auto-fetch server cart on mount if user is authenticated
+  const fetched = useRef(false)
+  useEffect(() => {
+    if (fetched.current) return
+    fetched.current = true
+    if (!isAuthenticated) return
+    fetchFromServer()
+  }, [isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchFromServer = useCallback(async () => {
     if (!isAuthenticated) return
     try {
       const response = await apiClient.cart.get()
@@ -63,6 +71,11 @@ export function useCart() {
       // Keep local state on error
     }
   }, [isAuthenticated, setItems])
+
+  // Fetch cart from server (for authenticated users)
+  const fetchCart = useCallback(async () => {
+    await fetchFromServer()
+  }, [fetchFromServer])
 
   const addItem = useCallback(
     async (item: Omit<CartItem, 'quantity'>) => {

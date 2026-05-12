@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiClient } from '@/services/api'
+import { extractApiError } from '@/lib/utils'
 
 export function useAuth() {
   const {
@@ -10,12 +11,30 @@ export function useAuth() {
     token,
     isLoading,
     isAuthenticated,
+    refreshToken,
     setUser,
     setToken,
     setRefreshToken,
     setLoading,
     logout: logoutStore,
   } = useAuthStore()
+
+  // Sync token from store to apiClient after hydration (runs once)
+  const synced = useRef(false)
+  useEffect(() => {
+    if (synced.current) return
+    synced.current = true
+
+    const storedToken = token || useAuthStore.getState().token
+    const storedRefresh = refreshToken || useAuthStore.getState().refreshToken
+
+    if (storedToken && !apiClient.getToken()) {
+      apiClient.setToken(storedToken)
+    }
+    if (storedRefresh && !apiClient.getRefreshToken()) {
+      apiClient.setRefreshToken(storedRefresh)
+    }
+  }, [token, refreshToken])
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -33,9 +52,7 @@ export function useAuth() {
 
         return { success: true }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Login failed'
-        return { success: false, error: message }
+        return { success: false, error: extractApiError(error, 'Login failed') }
       } finally {
         setLoading(false)
       }
@@ -58,9 +75,7 @@ export function useAuth() {
 
         return { success: true }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Registration failed'
-        return { success: false, error: message }
+        return { success: false, error: extractApiError(error, 'Registration failed') }
       } finally {
         setLoading(false)
       }
@@ -72,15 +87,6 @@ export function useAuth() {
     apiClient.clearAuth()
     logoutStore()
   }, [logoutStore])
-
-  // Sync token from store to apiClient on hydration
-  if (typeof window !== 'undefined' && token && !apiClient.getToken()) {
-    apiClient.setToken(token)
-  }
-  const refreshToken = useAuthStore.getState().refreshToken
-  if (typeof window !== 'undefined' && refreshToken && !apiClient.getRefreshToken()) {
-    apiClient.setRefreshToken(refreshToken)
-  }
 
   return {
     user,
