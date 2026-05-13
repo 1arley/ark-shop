@@ -608,7 +608,7 @@ export default function DashboardPage() {
                                                                                 .map((keyItem, ki) => (
                                                                                     <div key={ki} className='flex items-center gap-2'>
                                                                                         <span className='font-mono text-sm text-neutral-300'>
-                                                                                            {keyItem.key}
+                                                                                            {keyItem.decryptedKey}
                                                                                         </span>
                                                                                         <Button
                                                                                                                             size='sm'
