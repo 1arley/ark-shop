@@ -28,7 +28,7 @@ export default function AdminSellersPage() {
     try {
       setLoading(true)
       const res = await apiClient.sellers.list({ limit: 100 })
-      setSellers(Array.isArray(res.data) ? res.data : [])
+      setSellers(res.data?.data || [])
     } catch { } finally { setLoading(false) }
   }
 
