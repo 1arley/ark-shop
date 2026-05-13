@@ -53,7 +53,7 @@ export default function MyKeysPage() {
     setLoadingKeysId(orderId)
     try {
       const res = await apiClient.orders.downloadKeys(orderId)
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, keys: res.data } : o))
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, keys: res.data?.keys } : o))
     } catch { setError('Failed to load keys. Please try again.') }
     setLoadingKeysId(null)
   }
