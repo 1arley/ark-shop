@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/use-auth'
 import { apiClient } from '@/services/api'
 import type { AdminUser } from '@/types/api'
 
@@ -25,6 +26,7 @@ const roleColors: Record<string, string> = {
 }
 
 export default function AdminUsersPage() {
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -145,7 +147,9 @@ export default function AdminUsersPage() {
                             >
                               <option value='USER'>USER</option>
                               <option value='ADMIN'>ADMIN</option>
-                              <option value='SUPERADMIN'>SUPERADMIN</option>
+                              {currentUser?.role === 'SUPERADMIN' && (
+                                <option value='SUPERADMIN'>SUPERADMIN</option>
+                              )}
                             </select>
                           </div>
                         ) : (
@@ -189,10 +193,12 @@ export default function AdminUsersPage() {
                             className='border-neutral-700 text-neutral-400 hover:text-white'>
                             Edit
                           </Button>
+                          {currentUser?.role === 'SUPERADMIN' || user.role !== 'SUPERADMIN' ? (
                           <Button size='sm' variant='outline' onClick={() => handleDelete(user.id)} disabled={deleting === user.id}
                             className='border-neutral-700 text-neutral-400 hover:text-red-400'>
                             {deleting === user.id ? <Loader2 className='w-3.5 h-3.5 animate-spin' /> : <Trash2 className='w-3.5 h-3.5' />}
                           </Button>
+                          ) : null}
                         </div>
                       )}
                     </div>
