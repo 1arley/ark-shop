@@ -91,10 +91,10 @@ export default function AdminSellersPage() {
   }
 
   const filtered = sellers.filter(s =>
-    s.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-    s.document?.includes(search) ||
-    s.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.user?.email?.toLowerCase().includes(search.toLowerCase())
+    (s.companyName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.document ?? '').includes(search) ||
+    (s.user?.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.user?.email ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }
@@ -157,7 +157,7 @@ export default function AdminSellersPage() {
             </div>
             <div>
               <label className='block text-xs text-neutral-500 mb-1'>Commission (%)</label>
-              <input type='number' value={form.commission || 10}
+              <input type='number' value={form.commission ?? 10}
                 onChange={(e) => setForm(p => ({ ...p, commission: Number(e.target.value) }))}
                 min={0} max={100}
                 className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 focus:outline-none' />

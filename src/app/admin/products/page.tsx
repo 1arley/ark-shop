@@ -113,7 +113,8 @@ export default function AdminProductsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { setError('Product name is required'); return }
-    if (form.price <= 0) { setError('Price must be greater than 0'); return }
+    if (!form.price || form.price <= 0 || isNaN(form.price)) { setError('Price must be greater than 0'); return }
+    if (form.stock !== undefined && (form.stock < 0 || isNaN(form.stock))) { setError('Stock cannot be negative'); return }
     setSaving(true)
     setError(null)
     try {
@@ -135,7 +136,7 @@ export default function AdminProductsPage() {
       resetForm()
       await fetchProducts()
     } catch (e: unknown) { setError(extractApiError(e, 'Failed to save product')) }
-    setSaving(false)
+    finally { setSaving(false) }
   }
 
   const handleDelete = async (id: string) => {
@@ -145,9 +146,10 @@ export default function AdminProductsPage() {
       await apiClient.admin.deleteProduct(id)
       await fetchProducts()
     } catch (e: unknown) {
-      alert(extractApiError(e, 'Failed to delete product'))
+      setError(extractApiError(e, 'Failed to delete product'))
+    } finally {
+      setDeleting(null)
     }
-    setDeleting(null)
   }
 
   const toggleActive = async (product: Product) => {

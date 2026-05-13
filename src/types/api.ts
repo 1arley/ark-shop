@@ -94,6 +94,8 @@ export interface ApiCart {
   id: string
   userId: string
   items: ApiCartItem[]
+  total: number
+  itemCount: number
   createdAt: string
   updatedAt: string
 }
@@ -114,7 +116,7 @@ export interface OrderItem {
   orderId: string
   productId: string
   quantity: number
-  unitPrice: number
+  price: number
   product: Product
 }
 
@@ -124,7 +126,7 @@ export interface Order {
   status: OrderStatus
   total: number
   items: OrderItem[]
-  payments?: Payment[]
+  payment?: Payment | null
   user?: { id: string; name: string; email: string }
   createdAt: string
   updatedAt: string
@@ -171,7 +173,15 @@ export interface CreatePaymentPayload {
 
 export interface DeliveredKey {
   productName: string
-  key: string
+  keyId: string
+  deliveredAt: string
+  decryptedKey: string
+}
+
+export interface DownloadKeysResponse {
+  orderId: string
+  status: OrderStatus
+  keys: DeliveredKey[]
 }
 
 export interface GameKey {

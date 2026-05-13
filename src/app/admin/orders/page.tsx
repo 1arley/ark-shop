@@ -99,7 +99,7 @@ export default function AdminOrdersPage() {
       setLoadingKeys(orderId)
       try {
         const res = await apiClient.orders.downloadKeys(orderId)
-        setOrderKeys(prev => ({ ...prev, [orderId]: res.data }))
+        setOrderKeys(prev => ({ ...prev, [orderId]: res.data?.keys || [] }))
       } catch { } finally { setLoadingKeys(null) }
     }
   }
@@ -181,7 +181,7 @@ export default function AdminOrdersPage() {
           {filtered.map((order) => {
             const config = getStatusConfig(order.status)
             const isExpanded = expanded === order.id
-            const payment = order.payments?.[0]
+            const payment = order.payment
             const nextStatuses = statusFlow[order.status] || []
 
             return (
@@ -249,7 +249,7 @@ export default function AdminOrdersPage() {
                           <div>
                             <div className='text-xs text-neutral-500'>{item.product?.category?.name || 'Digital'}</div>
                             <div className='text-sm font-medium text-white'>{item.product?.name || `Item ${idx + 1}`}</div>
-                            <div className='text-xs text-neutral-500'>Qty: {item.quantity} × R$ {formatPrice(item.unitPrice)}</div>
+                            <div className='text-xs text-neutral-500'>Qty: {item.quantity} × R$ {formatPrice(item.price)}</div>
                           </div>
                           {/* Keys for delivered orders */}
                           {orderKeys[order.id] && orderKeys[order.id]

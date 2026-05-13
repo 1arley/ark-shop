@@ -425,7 +425,7 @@ class ApiClientClass {
       this.post<Order>(`/orders/${id}/cancel`, undefined, { requiresAuth: true }),
 
     downloadKeys: (id: string) =>
-      this.get<DeliveredKey[]>(`/orders/${id}/download`, { requiresAuth: true }),
+      this.get<DownloadKeysResponse>(`/orders/${id}/download`, { requiresAuth: true }),
   }
 
   // --- Payments ---
