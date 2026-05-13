@@ -38,7 +38,7 @@ import SectionHero from '@/components/layout/SectionHero'
 import { useAuth } from '@/hooks/use-auth'
 import { apiClient } from '@/services/api'
 import { formatPrice } from '@/lib/utils'
-import type { Order, OrderStatus, DashboardStats } from '@/types/api'
+import type { Order, OrderStatus, DashboardStats , DeliveredKey } from '@/types/api'
 
 function getStatusConfig(status: OrderStatus) {
     switch (status) {
