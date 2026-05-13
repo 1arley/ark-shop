@@ -1,73 +1,43 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import type { AuthUser } from '@/types/api'
+import { apiClient } from '@/services/api'
 
 interface AuthState {
   user: AuthUser | null
-  token: string | null
-  refreshToken: string | null
   isLoading: boolean
   isAuthenticated: boolean
   setUser: (user: AuthUser | null) => void
-  setToken: (token: string | null) => void
-  setRefreshToken: (refreshToken: string | null) => void
   setLoading: (loading: boolean) => void
+  /** Inicializa o estado de auth consultando /auth/me via cookie HTTP-only */
+  initialize: () => Promise<void>
   logout: () => void
 }
 
-const storageKey = 'ark-shop-auth'
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  isLoading: true,
+  isAuthenticated: false,
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      refreshToken: null,
-      isLoading: true,
-      isAuthenticated: false,
+  setUser: (user) => {
+    set({ user, isAuthenticated: !!user })
+  },
 
-      setUser: (user) => {
-        set({ user, isAuthenticated: !!user })
-      },
+  setLoading: (isLoading) => {
+    set({ isLoading })
+  },
 
-      setToken: (token) => {
-        set({ token })
-      },
-
-      setRefreshToken: (refreshToken) => {
-        set({ refreshToken })
-      },
-
-      setLoading: (isLoading) => {
-        set({ isLoading })
-      },
-
-      logout: () => {
-        set({ user: null, token: null, refreshToken: null, isAuthenticated: false })
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(storageKey)
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('auth_refresh_token')
-        }
-      },
-    }),
-    {
-      name: storageKey,
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setLoading(false)
-        }
-      },
+  initialize: async () => {
+    try {
+      const res = await apiClient.auth.me()
+      set({ user: res.data, isAuthenticated: true, isLoading: false })
+    } catch {
+      set({ user: null, isAuthenticated: false, isLoading: false })
     }
-  )
-)
+  },
 
-// Re-export for backwards compatibility
+  logout: () => {
+    set({ user: null, isAuthenticated: false })
+  },
+}))
+
 export type { AuthUser as User } from '@/types/api'

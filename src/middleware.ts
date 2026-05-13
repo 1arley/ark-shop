@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(_request: NextRequest) { // eslint-disable-line @typescript-eslint/no-unused-vars
-  // Auth guards are handled client-side in page components.
-  // This middleware is a placeholder for future server-side auth checks
-  // (e.g., when using HTTP-only cookies for JWT tokens).
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/about']
+const ADMIN_ROUTES_REGEX = /^\/admin/
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Rotas públicas — sempre permitir
+  if (PUBLIC_ROUTES.includes(pathname) || pathname === '') {
+    return NextResponse.next()
+  }
+
+  // Rotas admin exigem cookie de acesso
+  if (ADMIN_ROUTES_REGEX.test(pathname)) {
+    const accessToken = request.cookies.get('access_token')?.value
+
+    if (!accessToken) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
   return NextResponse.next()
 }
 

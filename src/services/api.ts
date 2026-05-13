@@ -59,36 +59,17 @@ class ApiClientClass {
 
   constructor() {
     this.baseURL = env.NEXT_PUBLIC_API_URL
-    // Auto-restore tokens from localStorage so API calls work immediately
-    // even before the React auth sync runs
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('auth_token')
-      if (stored) this.token = stored
-      const storedRefresh = localStorage.getItem('auth_refresh_token')
-      if (storedRefresh) this.refreshToken = storedRefresh
-    }
+    // Token persistence via HTTP-only cookies (set by backend on login/register).
+    // No localStorage needed — cookies are sent automatically by the browser.
+    // The Authorization header is kept as a fallback for non-browser contexts.
   }
 
   setToken(token: string | null) {
     this.token = token
-    if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('auth_token', token)
-      } else {
-        localStorage.removeItem('auth_token')
-      }
-    }
   }
 
   setRefreshToken(refreshToken: string | null) {
     this.refreshToken = refreshToken
-    if (typeof window !== 'undefined') {
-      if (refreshToken) {
-        localStorage.setItem('auth_refresh_token', refreshToken)
-      } else {
-        localStorage.removeItem('auth_refresh_token')
-      }
-    }
   }
 
   getToken(): string | null {
@@ -104,10 +85,6 @@ class ApiClientClass {
   clearAuth() {
     this.token = null
     this.refreshToken = null
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_refresh_token')
-    }
   }
 
   private async tryRefreshToken(): Promise<string> {
@@ -187,6 +164,7 @@ class ApiClientClass {
       const response = await fetch(url, {
         method,
         headers,
+        credentials: 'include',
         body: data ? JSON.stringify(data) : undefined,
       })
 
@@ -198,6 +176,7 @@ class ApiClientClass {
           const retryResponse = await fetch(url, {
             method,
             headers,
+            credentials: 'include',
             body: data ? JSON.stringify(data) : undefined,
           })
           const retryData = await retryResponse.json().catch(() => ({}))
@@ -321,16 +300,20 @@ class ApiClientClass {
     register: (payload: RegisterPayload) =>
       this.post<AuthResponse>('/auth/register', payload as unknown as Record<string, unknown>),
 
+    me: () =>
+      this.get<AuthUser>('/auth/me', { requiresAuth: true }),
+
     refresh: async (refreshToken: string) => {
       // Backend expects refresh token in Authorization Bearer header, not in body
       const response = await fetch(`${apiClient['baseURL']}/auth/refresh`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${refreshToken}`,
         },
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       return { data, status: response.status }
     },
 

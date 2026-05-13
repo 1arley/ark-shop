@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCartStore } from '@/stores/cart-store'
 import { apiClient } from '@/services/api'
@@ -9,33 +9,18 @@ import { extractApiError } from '@/lib/utils'
 export function useAuth() {
   const {
     user,
-    token,
     isLoading,
     isAuthenticated,
-    refreshToken,
     setUser,
-    setToken,
-    setRefreshToken,
     setLoading,
     logout: logoutStore,
+    initialize,
   } = useAuthStore()
 
-  // Sync token from store to apiClient after hydration (runs once)
-  const synced = useRef(false)
+  // On mount: try to authenticate via HTTP-only cookie (sent automatically)
   useEffect(() => {
-    if (synced.current) return
-    synced.current = true
-
-    const storedToken = token || useAuthStore.getState().token
-    const storedRefresh = refreshToken || useAuthStore.getState().refreshToken
-
-    if (storedToken && !apiClient.getToken()) {
-      apiClient.setToken(storedToken)
-    }
-    if (storedRefresh && !apiClient.getRefreshToken()) {
-      apiClient.setRefreshToken(storedRefresh)
-    }
-  }, [token, refreshToken])
+    initialize()
+  }, [initialize])
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -44,9 +29,7 @@ export function useAuth() {
         const response = await apiClient.auth.login({ email, password })
         const { access_token, refresh_token, user: userData } = response.data
 
-        // Store tokens in both zustand and apiClient
-        setToken(access_token)
-        setRefreshToken(refresh_token)
+        // Store in apiClient as fallback Authorization header
         apiClient.setToken(access_token)
         apiClient.setRefreshToken(refresh_token)
         setUser(userData)
@@ -58,7 +41,7 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser, setToken, setRefreshToken]
+    [setLoading, setUser]
   )
 
   const register = useCallback(
@@ -68,8 +51,6 @@ export function useAuth() {
         const response = await apiClient.auth.register({ email, password, name })
         const { access_token, refresh_token, user: userData } = response.data
 
-        setToken(access_token)
-        setRefreshToken(refresh_token)
         apiClient.setToken(access_token)
         apiClient.setRefreshToken(refresh_token)
         setUser(userData)
@@ -81,7 +62,7 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser, setToken, setRefreshToken]
+    [setLoading, setUser]
   )
 
   const logout = useCallback(() => {
@@ -89,12 +70,11 @@ export function useAuth() {
     apiClient.auth.logout().catch(() => {})
     apiClient.clearAuth()
     logoutStore()
-    useCartStore.getState().clearCart() // Clear cart from previous user
+    useCartStore.getState().clearCart()
   }, [logoutStore])
 
   return {
     user,
-    token,
     isLoading,
     isAuthenticated,
     login,
@@ -102,6 +82,5 @@ export function useAuth() {
     logout,
     setLoading,
     setUser,
-    setToken,
   }
 }
