@@ -616,7 +616,7 @@ export default function DashboardPage() {
                                                                                                                             className='border-neutral-700 hover:bg-neutral-800'
                                                                                                                             onClick={(e) => {
                                                                                                                                 e.stopPropagation()
-                                                                                                                                copyToClipboard(keyItem.key, `${order.id}-${ki}`)
+                                                                                                                                copyToClipboard(keyItem.decryptedKey, `${order.id}-${ki}`)
                                                                                                                             }}
                                                                                                                         >
                                                                                                                             {copiedKey === `${order.id}-${ki}` ? (

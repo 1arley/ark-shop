@@ -162,13 +162,13 @@ export default function MyKeysPage() {
                               <div key={ki} className='flex items-center justify-between bg-neutral-800/50 rounded-lg p-4 group'>
                                 <div className='min-w-0 flex-1'>
                                   <div className='text-xs text-neutral-500 mb-1'>{keyItem.productName}</div>
-                                  <div className='font-mono text-sm text-white break-all'>{keyItem.key}</div>
+                                  <div className='font-mono text-sm text-white break-all'>{keyItem.decryptedKey}</div>
                                 </div>
                                 <Button
                                   size='sm'
                                   variant='outline'
                                   className='ml-4 border-neutral-700 text-neutral-400 hover:bg-neutral-800 flex-shrink-0'
-                                  onClick={() => copyToClipboard(keyItem.key, `${order.id}-${ki}`)}
+                                  onClick={() => copyToClipboard(keyItem.decryptedKey, `${order.id}-${ki}`)}
                                 >
                                   {copiedKey === `${order.id}-${ki}`
                                     ? <CheckCircle2 className='w-4 h-4 text-emerald-400' />
