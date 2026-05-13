@@ -1,6 +1,6 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { AuthUser } from '@/types/api'
-import { apiClient } from '@/services/api'
 
 interface AuthState {
   user: AuthUser | null
@@ -8,36 +8,49 @@ interface AuthState {
   isAuthenticated: boolean
   setUser: (user: AuthUser | null) => void
   setLoading: (loading: boolean) => void
-  /** Inicializa o estado de auth consultando /auth/me via cookie HTTP-only */
-  initialize: () => Promise<void>
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  user: null,
-  isLoading: true,
-  isAuthenticated: false,
+const storageKey = 'ark-shop-auth'
 
-  setUser: (user) => {
-    set({ user, isAuthenticated: !!user })
-  },
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isLoading: true,
+      isAuthenticated: false,
 
-  setLoading: (isLoading) => {
-    set({ isLoading })
-  },
+      setUser: (user) => {
+        set({ user, isAuthenticated: !!user })
+      },
 
-  initialize: async () => {
-    try {
-      const res = await apiClient.auth.me()
-      set({ user: res.data, isAuthenticated: true, isLoading: false })
-    } catch {
-      set({ user: null, isAuthenticated: false, isLoading: false })
+      setLoading: (isLoading) => {
+        set({ isLoading })
+      },
+
+      logout: () => {
+        set({ user: null, isAuthenticated: false })
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(storageKey)
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('auth_refresh_token')
+        }
+      },
+    }),
+    {
+      name: storageKey,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setLoading(false)
+        }
+      },
     }
-  },
-
-  logout: () => {
-    set({ user: null, isAuthenticated: false })
-  },
-}))
+  )
+)
 
 export type { AuthUser as User } from '@/types/api'

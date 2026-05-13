@@ -59,17 +59,36 @@ class ApiClientClass {
 
   constructor() {
     this.baseURL = env.NEXT_PUBLIC_API_URL
-    // Token persistence via HTTP-only cookies (set by backend on login/register).
-    // No localStorage needed — cookies are sent automatically by the browser.
-    // The Authorization header is kept as a fallback for non-browser contexts.
+    // Restore tokens from localStorage as fallback for API calls.
+    // HTTP-only cookies are used for middleware/SSR protection.
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('auth_token')
+      if (stored) this.token = stored
+      const storedRefresh = localStorage.getItem('auth_refresh_token')
+      if (storedRefresh) this.refreshToken = storedRefresh
+    }
   }
 
   setToken(token: string | null) {
     this.token = token
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('auth_token', token)
+      } else {
+        localStorage.removeItem('auth_token')
+      }
+    }
   }
 
   setRefreshToken(refreshToken: string | null) {
     this.refreshToken = refreshToken
+    if (typeof window !== 'undefined') {
+      if (refreshToken) {
+        localStorage.setItem('auth_refresh_token', refreshToken)
+      } else {
+        localStorage.removeItem('auth_refresh_token')
+      }
+    }
   }
 
   getToken(): string | null {
@@ -85,6 +104,10 @@ class ApiClientClass {
   clearAuth() {
     this.token = null
     this.refreshToken = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_refresh_token')
+    }
   }
 
   private async tryRefreshToken(): Promise<string> {

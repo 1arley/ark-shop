@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCartStore } from '@/stores/cart-store'
 import { apiClient } from '@/services/api'
@@ -14,13 +14,26 @@ export function useAuth() {
     setUser,
     setLoading,
     logout: logoutStore,
-    initialize,
   } = useAuthStore()
 
-  // On mount: try to authenticate via HTTP-only cookie (sent automatically)
+  // Sync token from store to apiClient after hydration (runs once)
+  const synced = useRef(false)
   useEffect(() => {
-    initialize()
-  }, [initialize])
+    if (synced.current) return
+    synced.current = true
+
+    // On mount: apiClient already restored from localStorage in constructor.
+    // If store has a user but apiClient doesn't have a token (edge case),
+    // try to restore from localStorage.
+    if (!apiClient.getToken()) {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+      if (stored) apiClient.setToken(stored)
+    }
+    if (!apiClient.getRefreshToken()) {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('auth_refresh_token') : null
+      if (stored) apiClient.setRefreshToken(stored)
+    }
+  }, [])
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -29,7 +42,6 @@ export function useAuth() {
         const response = await apiClient.auth.login({ email, password })
         const { access_token, refresh_token, user: userData } = response.data
 
-        // Store in apiClient as fallback Authorization header
         apiClient.setToken(access_token)
         apiClient.setRefreshToken(refresh_token)
         setUser(userData)
@@ -66,7 +78,6 @@ export function useAuth() {
   )
 
   const logout = useCallback(() => {
-    // Notify backend to revoke refresh token (fire-and-forget)
     apiClient.auth.logout().catch(() => {})
     apiClient.clearAuth()
     logoutStore()
