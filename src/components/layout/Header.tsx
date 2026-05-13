@@ -93,34 +93,40 @@ export default function Header(_props: HeaderProps) {
     ]
 
     return (
-        <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled || pathname !== '/'
-            ? 'bg-slate-950/90 backdrop-blur-lg border-b border-slate-800'
-            : 'bg-transparent'
+        <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+            scrolled || pathname !== '/'
+                ? 'bg-slate-950/90 backdrop-blur-lg border-b border-slate-800/80'
+                : 'bg-transparent'
             }`}>
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <div className='flex items-center justify-between h-16 md:h-20'>
+                <div className='flex items-center justify-between h-20 md:h-24'>
                     {/* Logo */}
-                    <Link href='/' className='flex items-center gap-3 group'>
-                        <Image
-                            src='/images/site-logo.png'
-                            alt='Ark Games Shop'
-                            width={40}
-                            height={40}
-                            className='w-10 h-10 object-contain'
-                            priority
-                        />
-                        <span className='text-xl font-semibold text-white hidden sm:block'>Ark Games Shop</span>
+                    <Link href='/' className='flex items-center gap-4 group shrink-0'>
+                        <div className='relative w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center overflow-hidden'>
+                            <Image
+                                src='/images/site-logo.png'
+                                alt='Ark Games Shop'
+                                width={28}
+                                height={28}
+                                className='w-7 h-7 object-contain'
+                                priority
+                            />
+                        </div>
+                        <span className='text-lg font-bold tracking-tight text-white hidden sm:block'>
+                            Ark<span className='text-violet-400'>Shop</span>
+                        </span>
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <nav className='hidden md:flex items-center gap-8'>
+                    <nav className='hidden lg:flex items-center gap-1'>
                         {navLinks.map((link) => (
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className={`text-sm font-medium transition-colors ${pathname === link.href
-                                    ? 'text-white'
-                                    : 'text-slate-300 hover:text-white'
+                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                                    pathname === link.href
+                                        ? 'text-white bg-white/5'
+                                        : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'
                                     }`}
                             >
                                 {link.label}
@@ -129,143 +135,39 @@ export default function Header(_props: HeaderProps) {
                     </nav>
 
                     {/* Actions */}
-        <div className='flex items-center gap-3 md:gap-4'>
-        {/* Search Bar */}
-        <div className='hidden sm:flex items-center'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400' />
+        <div className='flex items-center gap-2 md:gap-6'>
+        {/* Search Bar — Desktop only */}
+        <div className='hidden md:flex items-center'>
+          <div className='relative group'>
+            <Search className='absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-violet-400 transition-colors' />
             <Input
               type='text'
               placeholder='Search...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearch}
-              className='w-40 lg:w-64 pl-10 bg-neutral-800/50 border-neutral-700 text-neutral-200 placeholder:text-neutral-500 focus:border-violet-500 focus:ring-violet-500 h-9 transition-all duration-200'
+              className='w-36 lg:w-56 pl-10 pr-3 h-9 bg-slate-800/40 border-slate-700/60 text-slate-200 placeholder:text-slate-500 focus:border-violet-500/50 focus:ring-violet-500/20 rounded-xl text-sm transition-all duration-300'
             />
           </div>
         </div>
 
-        {/* Auth Buttons — Desktop */}
-        {isAuthenticated ? (
-          <div className='hidden md:flex items-center gap-1'>
-            {/* Admin badge — só para admins */}
-            {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
-              <Link
-                href='/admin'
-                className='flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors'
-                title='Admin Panel'
-              >
-                <Settings className='w-3.5 h-3.5' />
-                <span className='hidden lg:inline'>Admin</span>
-              </Link>
-            )}
+        {/* Separator — Desktop only */}
+        <div className='hidden md:block w-px h-6 bg-slate-700/50' />
 
-            {/* User dropdown */}
-            <div className='relative' ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-600/20 border border-violet-600/30 text-violet-300 text-sm font-medium hover:bg-violet-600/30 transition-colors whitespace-nowrap'
-              >
-                <User className='w-4 h-4' />
-                <span className='hidden lg:inline max-w-[100px] truncate'>
-                  {user?.name?.split(' ')[0] || 'Account'}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className='absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl overflow-hidden z-50'
-                  >
-                    <div className='py-1'>
-                      <Link
-                        href='/dashboard'
-                        onClick={() => setUserMenuOpen(false)}
-                        className='flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
-                      >
-                        <LayoutDashboard className='w-4 h-4' />
-                        Dashboard
-                      </Link>
-                      <Link
-                        href='/profile'
-                        onClick={() => setUserMenuOpen(false)}
-                        className='flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
-                      >
-                        <Edit3 className='w-4 h-4' />
-                        Profile
-                      </Link>
-                      <hr className='border-neutral-800 my-1' />
-                      <button
-                        onClick={() => { handleLogout(); setUserMenuOpen(false) }}
-                        className='flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-300 hover:text-red-400 hover:bg-red-500/10 transition-colors'
-                      >
-                        <LogOut className='w-4 h-4' />
-                        Sign Out
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        ) : (
-          <div className='hidden md:flex items-center gap-2'>
-            <Link
-              href='/login'
-              className='px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-white transition-colors'
-            >
-              Sign In
-            </Link>
-            <Link
-              href='/register'
-              className='px-4 py-1.5 text-sm font-medium bg-white text-neutral-950 rounded-full hover:bg-neutral-200 transition-colors'
-            >
-              Sign Up
-            </Link>
-          </div>
-        )}
-
-        {/* Notifications */}
-        {isAuthenticated && (
-          <Link
-            href={user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) ? '/admin/notifications' : '#'}
-            className='relative p-2 text-neutral-300 hover:text-white transition-colors'
-            onClick={(e) => {
-              if (!user?.role || !['ADMIN', 'SUPERADMIN'].includes(user.role)) {
-                e.preventDefault()
-              }
-            }}
-          >
-            <Bell className='w-5 h-5' />
-            <span
-              className={`absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs font-medium rounded-full flex items-center justify-center transition-all duration-300 ${
-                mounted && unreadCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-              }`}
-            >
-              {mounted ? (unreadCount > 99 ? '99+' : unreadCount) : 0}
-            </span>
-          </Link>
-        )}
-
-        {/* Cart */}
+        {/* Cart — sempre visível em mobile e desktop */}
         <Link
           href='/cart'
-          className='relative p-2 text-neutral-300 hover:text-white transition-colors'
+          className='relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200'
+          title='Shopping Cart'
         >
           <motion.div
-            animate={{ scale: [1, 1.3, 1] }}
+            animate={{ scale: [1, 1.25, 1] }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
           >
-            <ShoppingCart className='w-5 h-5' />
+            <ShoppingCart className='w-[18px] h-[18px]' />
           </motion.div>
-          {/* Always render badge to prevent hydration mismatch; hide via CSS when 0 */}
           <span
-            className={`absolute -top-1 -right-1 w-5 h-5 bg-violet-600 text-white text-xs font-medium rounded-full flex items-center justify-center transition-all duration-300 ${
+            className={`absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-violet-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center transition-all duration-300 ${
               mounted && cartCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
             }`}
           >
@@ -273,11 +175,126 @@ export default function Header(_props: HeaderProps) {
           </span>
         </Link>
 
+        {/* Auth + User Actions — Desktop only */}
+        <div className='hidden md:flex items-center gap-3'>
+          {isAuthenticated ? (
+            <>
+              {/* Admin badge */}
+              {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
+                <Link
+                  href='/admin'
+                  className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold tracking-wide hover:bg-amber-500/20 hover:border-amber-500/30 transition-all duration-200'
+                  title='Admin Panel'
+                >
+                  <Settings className='w-3.5 h-3.5' />
+                  <span className='hidden xl:inline'>Admin</span>
+                </Link>
+              )}
+
+              {/* Notifications */}
+              <Link
+                href={user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) ? '/admin/notifications' : '#'}
+                className='relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200'
+                onClick={(e) => {
+                  if (!user?.role || !['ADMIN', 'SUPERADMIN'].includes(user.role)) {
+                    e.preventDefault()
+                  }
+                }}
+                title='Notifications'
+              >
+                <Bell className='w-[18px] h-[18px]' />
+                <span
+                  className={`absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center transition-all duration-300 ${
+                    mounted && unreadCount > 0 ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+                  }`}
+                >
+                  {mounted ? (unreadCount > 99 ? '99+' : unreadCount) : 0}
+                </span>
+              </Link>
+
+              {/* Separator */}
+              <div className='w-px h-5 bg-slate-700/40' />
+
+              {/* User dropdown */}
+              <div className='relative' ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className='flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600/15 border border-violet-600/25 text-violet-300 text-sm font-medium hover:bg-violet-600/25 hover:border-violet-600/35 transition-all duration-200 whitespace-nowrap'
+                >
+                  <User className='w-4 h-4' />
+                  <span className='hidden xl:inline max-w-[120px] truncate'>
+                    {user?.name?.split(' ')[0] || 'Account'}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-violet-400/70 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className='absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-700/60 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 backdrop-blur-xl'
+                    >
+                      <div className='py-1.5'>
+                        <div className='px-4 py-2 border-b border-slate-800/60 mb-1'>
+                          <p className='text-sm font-medium text-white truncate'>{user?.name || 'User'}</p>
+                          <p className='text-[11px] text-slate-500 truncate'>{user?.email}</p>
+                        </div>
+                        <Link
+                          href='/dashboard'
+                          onClick={() => setUserMenuOpen(false)}
+                          className='flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors'
+                        >
+                          <LayoutDashboard className='w-4 h-4 text-slate-500' />
+                          Dashboard
+                        </Link>
+                        <Link
+                          href='/profile'
+                          onClick={() => setUserMenuOpen(false)}
+                          className='flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors'
+                        >
+                          <Edit3 className='w-4 h-4 text-slate-500' />
+                          Profile
+                        </Link>
+                        <hr className='border-slate-800/60 my-1' />
+                        <button
+                          onClick={() => { handleLogout(); setUserMenuOpen(false) }}
+                          className='flex items-center gap-3 w-full px-4 py-2.5 text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors'
+                        >
+                          <LogOut className='w-4 h-4' />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link
+                href='/login'
+                className='px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-white transition-colors'
+              >
+                Sign In
+              </Link>
+              <Link
+                href='/register'
+                className='px-4 py-1.5 text-sm font-semibold bg-white text-slate-900 rounded-lg hover:bg-slate-200 transition-all duration-200'
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+        </div>
+
         {/* Mobile Menu Button */}
         <Button
           variant='ghost'
           size='icon'
-          className='md:hidden text-neutral-300 hover:text-white'
+          className='md:hidden text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-xl'
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
@@ -293,26 +310,26 @@ export default function Header(_props: HeaderProps) {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className='md:hidden bg-neutral-900 border-t border-neutral-800'
+        className='md:hidden bg-slate-900/95 backdrop-blur-xl border-t border-slate-800'
       >
-        <div className='px-4 py-4 space-y-4'>
+        <div className='px-4 py-5 space-y-5'>
           <Input
             type='text'
             placeholder='Search products...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearch}
-            className='w-full bg-neutral-800/50 border-neutral-700 text-neutral-200'
+            className='w-full bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-500 rounded-xl'
           />
-          <nav className='flex flex-col gap-2'>
+          <nav className='flex flex-col gap-1'>
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-2 rounded-lg transition-colors ${
+                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   pathname === link.href
-                    ? 'bg-violet-600 text-white'
-                    : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
+                    ? 'bg-violet-600/15 text-violet-300 border border-violet-600/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -320,59 +337,74 @@ export default function Header(_props: HeaderProps) {
               </Link>
             ))}
             {/* Auth links in mobile menu */}
-            <div className='border-t border-neutral-800 pt-2 mt-2'>
+            <div className='border-t border-slate-800 pt-4 mt-3 space-y-1'>
               {isAuthenticated ? (
                 <>
                   {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
                     <Link
                       href='/admin'
-                      className='flex items-center gap-3 px-3 py-2 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors'
+                      className='flex items-center gap-3 px-4 py-3 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors text-sm font-medium'
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Settings className='w-4 h-4' />
-                      <span className='text-sm'>Admin Panel</span>
+                      Admin Panel
+                    </Link>
+                  )}
+                  {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
+                    <Link
+                      href='/admin/notifications'
+                      className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Bell className='w-4 h-4' />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <span className='ml-auto text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400'>
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
                   )}
                   <Link
                     href='/dashboard'
-                    className='flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                    className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <User className='w-4 h-4' />
-                    <span className='text-sm'>{user?.name || 'Dashboard'}</span>
+                    <LayoutDashboard className='w-4 h-4' />
+                    Dashboard
                   </Link>
                   <Link
                     href='/profile'
-                    className='flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                    className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Edit3 className='w-4 h-4' />
-                    <span className='text-sm'>Profile</span>
+                    Profile
                   </Link>
                   <button
                     onClick={() => { handleLogout(); setIsMobileMenuOpen(false) }}
-                    className='flex items-center gap-3 w-full px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                    className='flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium'
                   >
                     <LogOut className='w-4 h-4' />
-                    <span className='text-sm'>Sign Out</span>
+                    Sign Out
                   </button>
                 </>
               ) : (
                 <>
                   <Link
                     href='/login'
-                    className='flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                    className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <User className='w-4 h-4' />
-                    <span className='text-sm'>Sign In</span>
+                    Sign In
                   </Link>
                   <Link
                     href='/register'
-                    className='flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors'
+                    className='flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors text-sm font-semibold mt-2'
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <span className='text-sm font-medium'>Sign Up</span>
+                    Sign Up
                   </Link>
                 </>
               )}
