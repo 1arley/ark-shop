@@ -62,30 +62,25 @@ export default function AdminKeysPage() {
 
   useEffect(() => { fetchKeys() }, [selectedProduct]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const abortRef = useRef<AbortController | null>(null)
+  // Flag para evitar race condition: quando keys/selectedProduct mudar,
+  // resultados de requisições anteriores são ignorados
+  const statsVersionRef = useRef(0)
 
-  const fetchStats = async (productId: string, signal?: AbortSignal) => {
+  const fetchStats = async (productId: string, version: number) => {
     try {
-      const res = await apiClient.keysAdmin.getKeyStats(productId, { signal })
-      if (signal?.aborted) return
+      const res = await apiClient.keysAdmin.getKeyStats(productId)
+      // Ignora resposta se uma nova rodada de fetch já começou
+      if (version !== statsVersionRef.current) return
       setStats(p => ({ ...p, [productId]: res.data }))
     } catch {
-      // Erros de requisição abortada são esperados e ignorados
+      // Erros são esperados ao trocar de produto rapidamente
     }
   }
 
   useEffect(() => {
-    // Cancela qualquer requisição anterior ainda pendente
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
+    const version = ++statsVersionRef.current
     const productIds = [...new Set(keys.map(k => k.productId))]
-    productIds.forEach(id => fetchStats(id, controller.signal))
-
-    return () => {
-      controller.abort()
-    }
+    productIds.forEach(id => fetchStats(id, version))
   }, [keys, selectedProduct])
 
   const filtered = keys.filter(k =>
