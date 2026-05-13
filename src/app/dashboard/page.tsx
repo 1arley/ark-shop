@@ -68,7 +68,7 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
     const [copiedKey, setCopiedKey] = useState<string | null>(null)
-    const [orderKeys, setOrderKeys] = useState<Record<string, { productName: string; key: string }[]>>({})
+    const [orderKeys, setOrderKeys] = useState<Record<string, DeliveredKey[]>>({})
     const [loadingKeys, setLoadingKeys] = useState<string | null>(null)
 
     // Admin state
@@ -127,7 +127,7 @@ export default function DashboardPage() {
         setLoadingKeys(orderId)
         try {
             const response = await apiClient.orders.downloadKeys(orderId)
-            setOrderKeys((prev) => ({ ...prev, [orderId]: response.data }))
+            setOrderKeys((prev) => ({ ...prev, [orderId]: response.data?.keys || [] }))
         } catch (err) {
             console.error('Failed to download keys:', err)
         } finally {
