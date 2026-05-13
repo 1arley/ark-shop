@@ -46,7 +46,7 @@ export default function AdminOrdersPage() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [delivering, setDelivering] = useState<string | null>(null)
   const [refunding, setRefunding] = useState<string | null>(null)
-  const [orderKeys, setOrderKeys] = useState<Record<string, { productName: string; key: string }[]>>({})
+  const [orderKeys, setOrderKeys] = useState<Record<string, DeliveredKey[]>>({})
   const [loadingKeys, setLoadingKeys] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
@@ -256,10 +256,10 @@ export default function AdminOrdersPage() {
                             .filter(k => k.productName === item.product?.name)
                             .map((keyItem, ki) => (
                               <div key={ki} className='flex items-center gap-2'>
-                                <span className='font-mono text-sm text-neutral-300'>{keyItem.key}</span>
+                                <span className='font-mono text-sm text-neutral-300'>{keyItem.decryptedKey}</span>
                                 <Button size='sm' variant='outline'
                                   className='border-neutral-700 hover:bg-neutral-800'
-                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(keyItem.key, `${order.id}-${ki}`) }}>
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(keyItem.decryptedKey, `${order.id}-${ki}`) }}>
                                   {copiedKey === `${order.id}-${ki}`
                                     ? <CheckCircle2 className='w-4 h-4 text-emerald-400' />
                                     : <Copy className='w-4 h-4' />}
