@@ -596,7 +596,7 @@ export default function DashboardPage() {
                                                                             {item.product?.name || `Product ${itemIndex + 1}`}
                                                                         </div>
                                                                         <div className='text-xs text-neutral-500 mt-1'>
-                                                                            Qty: {item.quantity} × R$ {formatPrice(item.unitPrice)}
+                                                                            Qty: {item.quantity} × R$ {formatPrice(item.price)}
                                                                         </div>
                                                                     </div>
 
