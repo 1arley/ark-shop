@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
 // Nota: Middleware de autenticação via cookie só funciona quando frontend e backend
 // estão no MESMO domínio (ex: ark-shop.com + api.ark-shop.com).
@@ -15,7 +14,7 @@ import type { NextRequest } from 'next/server'
 //   const accessToken = request.cookies.get('access_token')?.value
 //   if (!accessToken) return NextResponse.redirect(new URL('/login', request.url))
 
-export function middleware(_request: NextRequest) {
+export function middleware() {
   return NextResponse.next()
 }
 
