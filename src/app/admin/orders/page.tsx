@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { apiClient } from '@/services/api'
 import { formatPrice } from '@/lib/utils'
-import type { Order, OrderStatus } from '@/types/api'
+import type { Order, OrderStatus, DeliveredKey } from '@/types/api'
 
 function getStatusConfig(status: OrderStatus) {
   switch (status) {
