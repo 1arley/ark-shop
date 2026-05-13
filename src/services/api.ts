@@ -16,7 +16,6 @@ import type {
   CreateOrderPayload,
   Payment,
   CreatePaymentPayload,
-  DeliveredKey,
   DashboardStats,
   PaginatedResponse,
   PaginatedResponseMeta,
@@ -32,6 +31,7 @@ import type {
   FraudLog,
   SystemHealth,
   UploadResponse,
+  DownloadKeysResponse,
 } from '@/types/api'
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
