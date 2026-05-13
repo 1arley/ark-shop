@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, Search, Menu, X, User, LogOut, Settings, Bell, Edit3 } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, User, LogOut, Settings, Bell, Edit3, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/use-cart'
@@ -26,8 +26,21 @@ export default function Header(_props: HeaderProps) {
   const [searchQuery, setSearchQuery] = React.useState('')
   const [scrolled, setScrolled] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false)
+  const userMenuRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => { setMounted(true) }, [])
+
+  // Fecha o menu ao clicar fora
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -127,7 +140,7 @@ export default function Header(_props: HeaderProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearch}
-              className='w-64 pl-10 bg-neutral-800/50 border-neutral-700 text-neutral-200 placeholder:text-neutral-500 focus:border-violet-500 focus:ring-violet-500 h-9'
+              className='w-40 lg:w-64 pl-10 bg-neutral-800/50 border-neutral-700 text-neutral-200 placeholder:text-neutral-500 focus:border-violet-500 focus:ring-violet-500 h-9 transition-all duration-200'
             />
           </div>
         </div>
@@ -135,37 +148,70 @@ export default function Header(_props: HeaderProps) {
         {/* Auth Buttons — Desktop */}
         {isAuthenticated ? (
           <div className='hidden md:flex items-center gap-1'>
+            {/* Admin badge — só para admins */}
             {user?.role && ['ADMIN', 'SUPERADMIN'].includes(user.role) && (
               <Link
                 href='/admin'
-                className='flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors mr-1'
+                className='flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors'
                 title='Admin Panel'
               >
                 <Settings className='w-3.5 h-3.5' />
-                Admin
+                <span className='hidden lg:inline'>Admin</span>
               </Link>
             )}
-            <Link
-              href='/dashboard'
-              className='flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-600/20 border border-violet-600/30 text-violet-300 text-sm font-medium hover:bg-violet-600/30 transition-colors'
-            >
-              <User className='w-4 h-4' />
-              {user?.name?.split(' ')[0] || 'Dashboard'}
-            </Link>
-            <Link
-              href='/profile'
-              className='p-2 text-slate-400 hover:text-white transition-colors'
-              title='Profile Settings'
-            >
-              <Edit3 className='w-4 h-4' />
-            </Link>
-            <button
-              onClick={handleLogout}
-              className='p-2 text-slate-400 hover:text-red-400 transition-colors'
-              title='Sign Out'
-            >
-              <LogOut className='w-4 h-4' />
-            </button>
+
+            {/* User dropdown */}
+            <div className='relative' ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-600/20 border border-violet-600/30 text-violet-300 text-sm font-medium hover:bg-violet-600/30 transition-colors whitespace-nowrap'
+              >
+                <User className='w-4 h-4' />
+                <span className='hidden lg:inline max-w-[100px] truncate'>
+                  {user?.name?.split(' ')[0] || 'Account'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className='absolute right-0 top-full mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl overflow-hidden z-50'
+                  >
+                    <div className='py-1'>
+                      <Link
+                        href='/dashboard'
+                        onClick={() => setUserMenuOpen(false)}
+                        className='flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                      >
+                        <LayoutDashboard className='w-4 h-4' />
+                        Dashboard
+                      </Link>
+                      <Link
+                        href='/profile'
+                        onClick={() => setUserMenuOpen(false)}
+                        className='flex items-center gap-2.5 px-4 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors'
+                      >
+                        <Edit3 className='w-4 h-4' />
+                        Profile
+                      </Link>
+                      <hr className='border-neutral-800 my-1' />
+                      <button
+                        onClick={() => { handleLogout(); setUserMenuOpen(false) }}
+                        className='flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-neutral-300 hover:text-red-400 hover:bg-red-500/10 transition-colors'
+                      >
+                        <LogOut className='w-4 h-4' />
+                        Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         ) : (
           <div className='hidden md:flex items-center gap-2'>
