@@ -431,7 +431,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                             className='border-slate-600 hover:bg-slate-700 h-14 px-8'
                                             disabled={product.stock <= 0}
                                         >
-                                            <Link href='/cart'>Buy Now</Link>
+                                            <Link href='/checkout'>Buy Now</Link>
                                         </Button>
                                     </div>
 
