@@ -1,28 +1,21 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/', '/about']
-const ADMIN_ROUTES_REGEX = /^\/admin/
+// Nota: Middleware de autenticação via cookie só funciona quando frontend e backend
+// estão no MESMO domínio (ex: ark-shop.com + api.ark-shop.com).
+// Atualmente frontend (Vercel) e backend (Railway) estão em domínios diferentes,
+// então o cookie httpOnly do backend não é visível aqui.
+//
+// A proteção de rotas admin é feita via:
+//   1. API Client: envia Authorization: Bearer de localStorage
+//   2. Backend: JwtAuthGuard valida em toda requisição
+//   3. Admin Layout: useAuth() verifica autenticação antes de renderizar
+//
+// Quando migrar para mesmo domínio, reativar:
+//   const accessToken = request.cookies.get('access_token')?.value
+//   if (!accessToken) return NextResponse.redirect(new URL('/login', request.url))
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // Rotas públicas — sempre permitir
-  if (PUBLIC_ROUTES.includes(pathname) || pathname === '') {
-    return NextResponse.next()
-  }
-
-  // Rotas admin exigem cookie de acesso
-  if (ADMIN_ROUTES_REGEX.test(pathname)) {
-    const accessToken = request.cookies.get('access_token')?.value
-
-    if (!accessToken) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-  }
-
+export function middleware(_request: NextRequest) {
   return NextResponse.next()
 }
 
