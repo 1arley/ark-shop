@@ -635,24 +635,24 @@ class ApiClientClass {
 
   sellers = {
     create: (data: CreateSellerPayload) =>
-      this.post<Seller>('/sellers', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Seller>('/admin/sellers', data as unknown as Record<string, unknown>, { requiresAuth: true }),
 
     list: (params?: { page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<Seller[]>(`/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<Seller[]>(`/admin/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
     },
 
     getById: (id: string) =>
-      this.get<Seller>(`/sellers/${id}`, { requiresAuth: true }),
+      this.get<Seller>(`/admin/sellers/${id}`, { requiresAuth: true }),
 
     update: (id: string, data: UpdateSellerPayload) =>
-      this.patch<Seller>(`/sellers/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<Seller>(`/admin/sellers/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
 
     delete: (id: string) =>
-      this.delete<void>(`/sellers/${id}`, { requiresAuth: true }),
+      this.delete<void>(`/admin/sellers/${id}`, { requiresAuth: true }),
   }
 
   // --- Contact ---
