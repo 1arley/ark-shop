@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   KeyRound, Search, Loader2, Trash2, Save, X,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { AnimatedForm } from '@/components/ui/animated-form'
 import { apiClient } from '@/services/api'
 import type { GameKey, Product } from '@/types/api'
 
@@ -61,20 +62,31 @@ export default function AdminKeysPage() {
 
   useEffect(() => { fetchKeys() }, [selectedProduct]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchStats = async (productId: string) => {
+  const abortRef = useRef<AbortController | null>(null)
+
+  const fetchStats = async (productId: string, signal?: AbortSignal) => {
     try {
-      const res = await apiClient.keysAdmin.getKeyStats(productId)
+      const res = await apiClient.keysAdmin.getKeyStats(productId, { signal })
+      if (signal?.aborted) return
       setStats(p => ({ ...p, [productId]: res.data }))
-    } catch { }
+    } catch {
+      // Erros de requisição abortada são esperados e ignorados
+    }
   }
 
   useEffect(() => {
-    if (keys.length > 0) {
-      const productIds = [...new Set(keys.map(k => k.productId))]
-      productIds.forEach(id => fetchStats(id))
+    // Cancela qualquer requisição anterior ainda pendente
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    const productIds = [...new Set(keys.map(k => k.productId))]
+    productIds.forEach(id => fetchStats(id, controller.signal))
+
+    return () => {
+      controller.abort()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keys.length])
+  }, [keys, selectedProduct])
 
   const filtered = keys.filter(k =>
     k.keyData?.toLowerCase().includes(search.toLowerCase()) ||
@@ -121,8 +133,12 @@ export default function AdminKeysPage() {
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = `keys-export-${Date.now()}.csv`; a.click()
-    URL.revokeObjectURL(url)
+    a.href = url
+    a.download = `keys-export-${Date.now()}.csv`
+    a.click()
+    // Aguarda o navegador iniciar o download antes de liberar a URL do blob
+    // https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL
+    requestAnimationFrame(() => URL.revokeObjectURL(url))
   }
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.03 } } }
@@ -326,14 +342,3 @@ export default function AdminKeysPage() {
   )
 }
 
-function AnimatedForm({ visible, children }: { visible: boolean; children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={visible ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
-      className='overflow-hidden'
-    >
-      {children}
-    </motion.div>
-  )
-}

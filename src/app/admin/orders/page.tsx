@@ -104,10 +104,29 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const copyToClipboard = (key: string, itemId: string) => {
-    navigator.clipboard.writeText(key)
-    setCopiedKey(itemId)
-    setTimeout(() => setCopiedKey(null), 2000)
+  const copyToClipboard = async (key: string, itemId: string) => {
+    try {
+      await navigator.clipboard.writeText(key)
+      setCopiedKey(itemId)
+      setTimeout(() => setCopiedKey(null), 2000)
+    } catch {
+      // Fallback para navegadores sem suporte a clipboard API ou em contexto não seguro
+      try {
+        const textarea = document.createElement('textarea')
+        textarea.value = key
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        setCopiedKey(itemId)
+        setTimeout(() => setCopiedKey(null), 2000)
+      } catch {
+        // Se ambos falharem, exibe a key selecionável para cópia manual
+        alert('Could not copy key. Please select and copy it manually.')
+      }
+    }
   }
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }

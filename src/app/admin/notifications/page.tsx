@@ -22,6 +22,8 @@ export default function AdminNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [marking, setMarking] = useState<string | null>(null)
+  const [markingAll, setMarkingAll] = useState(false)
+  const [notifError, setNotifError] = useState<string | null>(null)
 
   const fetchNotifications = async () => {
     try {
@@ -35,17 +37,33 @@ export default function AdminNotificationsPage() {
 
   const handleMarkRead = async (id: string) => {
     setMarking(id)
+    // Snapshot do estado atual para rollback em caso de falha
+    const previous = notifications.find(n => n.id === id)
+    const wasRead = !!previous?.readAt
     try {
       await apiClient.notifications.markAsRead(id)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
-    } catch { } finally { setMarking(null) }
+    } catch {
+      // Reverte o estado otimista se a API falhar
+      if (!wasRead && previous) {
+        setNotifications(prev => prev.map(n => n.id === id ? previous : n))
+      }
+      setNotifError('Failed to mark notification as read')
+      setTimeout(() => setNotifError(null), 4000)
+    } finally { setMarking(null) }
   }
 
   const handleMarkAllRead = async () => {
+    setMarkingAll(true)
+    const previous = [...notifications]
     try {
       await apiClient.notifications.markAllAsRead()
       setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })))
-    } catch { }
+    } catch {
+      setNotifications(previous)
+      setNotifError('Failed to mark all as read')
+      setTimeout(() => setNotifError(null), 4000)
+    } finally { setMarkingAll(false) }
   }
 
   const unreadCount = notifications.filter(n => !n.readAt).length
@@ -64,12 +82,27 @@ export default function AdminNotificationsPage() {
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button onClick={handleMarkAllRead}
+          <Button onClick={handleMarkAllRead} disabled={markingAll}
             className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'>
-            <CheckCheck className='w-4 h-4 mr-2' />Mark All Read
+            {markingAll
+              ? <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+              : <CheckCheck className='w-4 h-4 mr-2' />
+            }
+            Mark All Read
           </Button>
         )}
       </motion.div>
+
+      {/* Erro feedback */}
+      {notifError && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='mb-4 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400'
+        >
+          {notifError}
+        </motion.div>
+      )}
 
       {loading ? (
         <div className='flex justify-center py-20'><Loader2 className='w-10 h-10 text-amber-400 animate-spin' /></div>

@@ -28,7 +28,9 @@ export default function AdminDashboardPage() {
       setLoading(true)
       const res = await apiClient.admin.dashboard()
       setStats(res.data)
-    } catch { } finally { setLoading(false) }
+    } catch (err) {
+      console.error('[Dashboard] Failed to fetch stats:', err)
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchStats() }, [])

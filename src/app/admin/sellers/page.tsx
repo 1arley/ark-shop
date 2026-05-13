@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { AnimatedForm } from '@/components/ui/animated-form'
 import { apiClient } from '@/services/api'
 import type { Seller, CreateSellerPayload } from '@/types/api'
 
@@ -247,14 +248,3 @@ export default function AdminSellersPage() {
   )
 }
 
-function AnimatedForm({ visible, children }: { visible: boolean; children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={visible ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
-      className='overflow-hidden'
-    >
-      {children}
-    </motion.div>
-  )
-}
