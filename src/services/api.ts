@@ -642,7 +642,7 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<Seller[]>(`/admin/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponseMeta<Seller>>(`/admin/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
     },
 
     getById: (id: string) =>
