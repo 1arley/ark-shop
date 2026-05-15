@@ -120,7 +120,7 @@ export default function CheckoutPage() {
     }
 
     const handleCopyPixCode = async () => {
-        const pixText = payment?.pixCode || payment?.pixQrCode || ''
+        const pixText = payment?.pixCode || payment?.pixCopyPaste || ''
         if (!pixText) return
         try {
             await navigator.clipboard.writeText(pixText)
@@ -234,7 +234,7 @@ export default function CheckoutPage() {
                                         <div className='mb-6'>
                                             <div className='bg-white p-4 rounded-xl inline-block mb-4'>
                                                 <Image
-                                                    src={`data:image/png;base64,${payment.pixQrCode}`}
+                                                    src={payment.pixQrCode}
                                                     alt='PIX QR Code'
                                                     width={192}
                                                     height={192}
@@ -244,13 +244,13 @@ export default function CheckoutPage() {
                                     )}
 
                                     {/* PIX Copy-Paste */}
-                                    {(payment.pixCode || payment.pixQrCode) && (
+                                    {(payment.pixCode || payment.pixCopyPaste) && (
                                         <div className='space-y-3'>
                                             <p className='text-sm text-neutral-400'>Or copy the PIX code:</p>
                                             <div className='flex gap-2'>
                                                 <div className='flex-1 bg-neutral-800 border border-neutral-700 rounded-lg p-3 text-left'>
                                                     <p className='text-xs text-neutral-300 font-mono break-all line-clamp-2'>
-                                                        {payment.pixCode || payment.pixQrCode}
+                                                        {payment.pixCode || payment.pixCopyPaste}
                                                     </p>
                                                 </div>
                                                 <Button
