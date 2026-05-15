@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
     ShoppingCart,
@@ -44,6 +45,8 @@ const categoryIcons = [
     { icon: Lock, color: 'from-cyan-500 to-sky-600' },
 ]
 
+const ADD_TO_CART_ANIMATION_DURATION = 1200
+
 export default function Home() {
     const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
     const [categories, setCategories] = useState<Category[]>([])
@@ -62,8 +65,8 @@ export default function Home() {
                 } else {
                     setFeaturedProducts((data.data || []).slice(0, 4))
                 }
-            } catch {
-                // silently fail — products section will be empty
+            } catch (err) {
+                console.error('[Home] Failed to load featured products:', err)
             } finally {
                 setIsLoadingProducts(false)
             }
@@ -73,8 +76,8 @@ export default function Home() {
             try {
                 const response = await apiClient.categories.list()
                 setCategories(Array.isArray(response.data) ? response.data : [])
-            } catch {
-                // silently fail
+            } catch (err) {
+                console.error('[Home] Failed to load categories:', err)
             } finally {
                 setIsLoadingCategories(false)
             }
@@ -96,7 +99,7 @@ export default function Home() {
             image: product.imageUrl || undefined,
         })
         setJustAdded(product.id)
-        setTimeout(() => setJustAdded(null), 1200)
+        setTimeout(() => setJustAdded(null), ADD_TO_CART_ANIMATION_DURATION)
     }
 
     const getCategoryDisplay = (index: number) => {
@@ -356,7 +359,7 @@ export default function Home() {
                                         <Card className='bg-neutral-900/50 border-neutral-800 hover:border-violet-500/30 transition-all group overflow-hidden'>
                                             <div className='relative aspect-square bg-neutral-800/50 flex items-center justify-center'>
                                                 {product.imageUrl ? (
-                                                    <img src={product.imageUrl} alt={product.name} className='object-cover w-full h-full' />
+                                                    <Image src={product.imageUrl} alt={product.name} fill className='object-cover' sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw' unoptimized />
                                                 ) : (
                                                     <Package className='w-16 h-16 text-neutral-700' />
                                                 )}

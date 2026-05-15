@@ -39,26 +39,10 @@ export function useCart() {
         image: ci.product.imageUrl || undefined,
       }))
       setItems(serverItems)
-    } catch {
-      // If backend cart fails, keep local state
+    } catch (err) {
+      console.error('[useCart] syncCartToServer failed:', err)
     }
   }, [isAuthenticated, items, setItems])
-
-  // Auto-fetch server cart on mount if user is authenticated
-  const fetched = useRef(false)
-  const prevAuth = useRef(isAuthenticated)
-
-  useEffect(() => {
-    // Reset fetched flag when auth state changes (logout → login different user)
-    if (prevAuth.current !== isAuthenticated) {
-      fetched.current = false
-      prevAuth.current = isAuthenticated
-    }
-    if (fetched.current) return
-    fetched.current = true
-    if (!isAuthenticated) return
-    fetchFromServer()
-  }, [isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchFromServer = useCallback(async () => {
     if (!isAuthenticated) return
@@ -74,10 +58,25 @@ export function useCart() {
         image: ci.product.imageUrl || undefined,
       }))
       setItems(serverItems)
-    } catch {
-      // Keep local state on error
+    } catch (err) {
+      console.error('[useCart] fetchFromServer failed:', err)
     }
   }, [isAuthenticated, setItems])
+
+  // Auto-fetch server cart on mount if user is authenticated
+  const fetched = useRef(false)
+  const prevAuth = useRef(isAuthenticated)
+
+  useEffect(() => {
+    if (prevAuth.current !== isAuthenticated) {
+      fetched.current = false
+      prevAuth.current = isAuthenticated
+    }
+    if (fetched.current) return
+    fetched.current = true
+    if (!isAuthenticated) return
+    fetchFromServer()
+  }, [isAuthenticated, fetchFromServer])
 
   // Fetch cart from server (for authenticated users)
   const fetchCart = useCallback(async () => {
@@ -90,8 +89,8 @@ export function useCart() {
       if (isAuthenticated) {
         try {
           await apiClient.cart.addItem(item.productId, 1)
-        } catch {
-          // Local state already updated
+        } catch (err) {
+          console.error('[useCart] addItem server sync failed:', err)
         }
       }
     },
@@ -105,8 +104,8 @@ export function useCart() {
       if (isAuthenticated && item) {
         try {
           await apiClient.cart.removeItem(item.productId)
-        } catch {
-          // Local state already updated
+        } catch (err) {
+          console.error('[useCart] removeItem server sync failed:', err)
         }
       }
     },
@@ -120,8 +119,8 @@ export function useCart() {
       if (isAuthenticated && item) {
         try {
           await apiClient.cart.updateItem(item.productId, quantity)
-        } catch {
-          // Local state already updated
+        } catch (err) {
+          console.error('[useCart] updateQuantity server sync failed:', err)
         }
       }
     },
@@ -133,8 +132,8 @@ export function useCart() {
     if (isAuthenticated) {
       try {
         await apiClient.cart.clear()
-      } catch {
-        // Local state already cleared
+      } catch (err) {
+        console.error('[useCart] clearCart server sync failed:', err)
       }
     }
   }, [clearCartStore, isAuthenticated])

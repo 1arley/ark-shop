@@ -43,11 +43,11 @@ function LoginForm() {
     }
   }
 
-    return (
-        <div className='min-h-screen bg-neutral-950'>
-            <Header />
+  return (
+    <div className='min-h-screen bg-neutral-950'>
+      <Header />
 
-            {/* Hero Section */}
+      {/* Hero Section */}
       <section className='section-hero'>
         <div className='section-container'>
           <motion.div

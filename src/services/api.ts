@@ -56,6 +56,7 @@ class ApiClientClass {
     resolve: (token: string) => void
     reject: (error: Error) => void
   }> = []
+  private refreshQueueTimeout: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     this.baseURL = env.NEXT_PUBLIC_API_URL
@@ -124,6 +125,16 @@ class ApiClientClass {
 
     this.isRefreshing = true
 
+    // Safety timeout: clear the queue after 15 seconds to prevent memory leaks
+    this.refreshQueueTimeout = setTimeout(() => {
+      if (this.refreshQueue.length > 0) {
+        const timeoutError = new Error('Token refresh timed out after 15s')
+        this.refreshQueue.forEach(({ reject }) => reject(timeoutError))
+        this.refreshQueue = []
+        this.isRefreshing = false
+      }
+    }, 15000)
+
     try {
       // Backend expects refresh token in Authorization Bearer header, not in body
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
@@ -153,11 +164,13 @@ class ApiClientClass {
 
       return newToken
     } catch (error) {
+      if (this.refreshQueueTimeout) clearTimeout(this.refreshQueueTimeout)
       this.refreshQueue.forEach(({ reject }) => reject(error as Error))
       this.refreshQueue = []
       this.clearAuth()
       throw error
     } finally {
+      if (this.refreshQueueTimeout) clearTimeout(this.refreshQueueTimeout)
       this.isRefreshing = false
     }
   }

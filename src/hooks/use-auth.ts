@@ -78,7 +78,7 @@ export function useAuth() {
   )
 
   const logout = useCallback(() => {
-    apiClient.auth.logout().catch(() => {})
+    apiClient.auth.logout().catch((err) => console.error('[useAuth] Logout API call failed:', err))
     apiClient.clearAuth()
     logoutStore()
     useCartStore.getState().clearCart()

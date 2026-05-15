@@ -23,6 +23,9 @@ import { apiClient } from '@/services/api'
 import { formatPrice, extractApiError } from '@/lib/utils'
 import type { Order, Payment } from '@/types/api'
 
+const PIX_COPY_FEEDBACK_DURATION = 3000
+const PAYMENT_POLL_INTERVAL = 5000
+
 export default function CheckoutPage() {
     const router = useRouter()
     const { items: cartItems, total, clearCart } = useCart()
@@ -73,10 +76,10 @@ export default function CheckoutPage() {
                     setPollingPayment(false)
                     setError('Payment was rejected. Please try again.')
                 }
-            } catch {
-                // continue polling
+            } catch (err) {
+                console.error('[Checkout] Payment polling error:', err)
             }
-        }, 5000) // Poll every 5 seconds
+        }, PAYMENT_POLL_INTERVAL)
 
         return () => clearInterval(interval)
     }, [payment, completed, pollingPayment, clearCart])
@@ -121,9 +124,9 @@ export default function CheckoutPage() {
         try {
             await navigator.clipboard.writeText(pixText)
             setCopied(true)
-            setTimeout(() => setCopied(false), 3000)
-        } catch {
-            // fallback
+            setTimeout(() => setCopied(false), PIX_COPY_FEEDBACK_DURATION)
+        } catch (err) {
+            console.error('[Checkout] Failed to copy PIX code:', err)
         }
     }
 
@@ -334,7 +337,7 @@ export default function CheckoutPage() {
                                         <div className='p-4 rounded-lg border-2 border-violet-500 bg-violet-500/10'>
                                             <div className='flex items-center gap-3 mb-2'>
                                                 <QrCode className='w-5 h-5 text-violet-400' />
-                                                <span className='text-white font-medium'>PIX (Mercado Pago)</span>
+                                                <span className='text-white font-medium'>PIX (ASAAS)</span>
                                             </div>
                                             <span className='text-xs text-neutral-400'>
                                                 Instant payment — your keys will be delivered immediately after confirmation
@@ -460,7 +463,7 @@ export default function CheckoutPage() {
 
                                     <div className='flex items-center justify-center gap-2 mt-4 text-xs text-neutral-500'>
                                         <Shield className='w-3 h-3' />
-                                        <span>Encrypted Payment via Mercado Pago</span>
+                                        <span>Encrypted Payment via ASAAS</span>
                                     </div>
                                 </CardContent>
                             </Card>

@@ -29,23 +29,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
 
-  useEffect(() => { setMounted(true) }, [])
+  // Check auth synchronously before rendering; redirect if needed
+  if (isLoading) {
+    return (
+      <div className='min-h-screen bg-neutral-950 flex items-center justify-center'>
+        <div className='w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin' />
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    if (!isLoading && mounted) {
-      if (!isAuthenticated) {
-        router.push('/login?redirect=/admin')
-      } else if (!isAdmin) {
-        router.push('/dashboard')
-      }
-    }
-  }, [isAuthenticated, isLoading, isAdmin, router, mounted])
+  if (!isAuthenticated) {
+    router.push('/login?redirect=/admin')
+    return (
+      <div className='min-h-screen bg-neutral-950 flex items-center justify-center'>
+        <div className='w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin' />
+      </div>
+    )
+  }
 
-  if (!mounted || isLoading || !isAuthenticated || !isAdmin) {
+  if (!isAdmin) {
+    router.push('/dashboard')
     return (
       <div className='min-h-screen bg-neutral-950 flex items-center justify-center'>
         <div className='w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin' />

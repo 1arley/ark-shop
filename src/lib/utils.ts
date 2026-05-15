@@ -7,8 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatPrice(value: number | string): string {
   const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return '0.00'
-  return num.toFixed(2)
+  if (isNaN(num)) return '0,00'
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num)
 }
 
 export function extractApiError(err: unknown, fallback = 'An unexpected error occurred'): string {

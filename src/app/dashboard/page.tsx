@@ -61,6 +61,9 @@ function getStatusConfig(status: OrderStatus) {
     }
 }
 
+const CLIPBOARD_FEEDBACK_DURATION = 2000
+const DEFAULT_ORDERS_LIMIT = 50
+
 export default function DashboardPage() {
     const router = useRouter()
     const { user, isAuthenticated, isLoading: authLoading } = useAuth()
@@ -99,8 +102,8 @@ export default function DashboardPage() {
                     const data = response.data
                     setOrders(Array.isArray(data) ? data : (data.data || []))
                 }
-            } catch {
-                // keep empty
+            } catch (err) {
+                console.error('[Dashboard] Failed to load orders:', err)
             } finally {
                 setIsLoading(false)
             }
@@ -138,7 +141,7 @@ export default function DashboardPage() {
     const copyToClipboard = (key: string, itemId: string) => {
         navigator.clipboard.writeText(key)
         setCopiedKey(itemId)
-        setTimeout(() => setCopiedKey(null), 2000)
+        setTimeout(() => setCopiedKey(null), CLIPBOARD_FEEDBACK_DURATION)
     }
 
     const handleToggleOrder = async (orderId: string) => {

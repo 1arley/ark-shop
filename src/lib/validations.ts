@@ -27,8 +27,8 @@ export const registerSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .max(100, 'Password must be less than 100 characters')
     .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}~|])/,
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
     ),
   confirmPassword: z.string().min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -41,21 +41,6 @@ export const checkoutSchema = z.object({
     .string()
     .min(1, 'Email is required')
     .email('Invalid email address'),
-  cardNumber: z
-    .string()
-    .min(1, 'Card number is required')
-    .regex(/^\d{16}$/, 'Card number must be 16 digits')
-    .or(z.literal('')),
-  expiryDate: z
-    .string()
-    .min(1, 'Expiry date is required')
-    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Expiry date must be in MM/YY format')
-    .or(z.literal('')),
-  cvv: z
-    .string()
-    .min(1, 'CVV is required')
-    .regex(/^\d{3,4}$/, 'CVV must be 3 or 4 digits')
-    .or(z.literal('')),
 })
 
 export const contactFormSchema = z.object({
