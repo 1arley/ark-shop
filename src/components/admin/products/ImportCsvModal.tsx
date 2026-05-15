@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { apiClient } from '@/services/api';
+import { Product } from '@/types/api';
 
 interface ImportCsvModalProps {
   isOpen: boolean;
@@ -55,14 +56,11 @@ export function ImportCsvModal({
       reader.onload = async (event) => {
         const csvContent = event.target?.result as string;
 
-        const response = await apiClient.request<{ imported: number; failed: number; products: any[]; errors: string[] }>('/products/import', {
-          method: 'POST',
-          data: {
+        const response = await apiClient.post<{ imported: number; failed: number; products: Product[]; errors: string[] }>('/products/import', {
             csvContent,
             categoryId: categoryId || undefined,
             isActive: true,
-          },
-        });
+          });
 
         onSuccess?.(response.data.imported);
         onClose();
@@ -80,17 +78,29 @@ export function ImportCsvModal({
     }
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile) {
-      const input = fileInputRef.current;
-      if (input) {
-        input.files = e.dataTransfer.files;
-        handleFileChange({ target: { files: { 0: droppedFile } } } as any);
-      }
-    }
+const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  const droppedFile = e.dataTransfer.files?.[0];
+  if (!droppedFile) return;
+
+  // Validate CSV extension
+  if (!droppedFile.name.endsWith('.csv')) {
+    setError('Por favor, selecione um arquivo CSV');
+    return;
+  }
+
+  setFile(droppedFile);
+  setError(null);
+
+  // Generate preview similar to handleFileChange
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const content = event.target?.result as string;
+    const lines = content.split('\n').slice(0, 5);
+    setPreview(lines.join('\n'));
   };
+  reader.readAsText(droppedFile, 'latin1');
+};
 
   if (!isOpen) return null;
 
