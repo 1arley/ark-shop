@@ -27,7 +27,6 @@ import type { Order, Payment } from '@/types/api'
 
 const PIX_COPY_FEEDBACK_DURATION = 3000
 const PAYMENT_POLL_INTERVAL = 5000
-const PIX_EXPIRATION_DAYS = 3
 
 function formatCountdown(ms: number): string {
     const totalSeconds = Math.floor(ms / 1000)
