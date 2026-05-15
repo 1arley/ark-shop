@@ -7,6 +7,7 @@ import {
   Edit3, Eye, EyeOff, Filter, Tag,
   DollarSign, Layers, ImageIcon, Upload
 } from 'lucide-react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/services/api'
@@ -249,9 +250,8 @@ export default function AdminProductsPage() {
                   <label className='block text-xs text-neutral-500 mb-1'>Image</label>
                   <div className='flex items-center gap-3'>
                     {form.imageUrl && (
-                      <div className='w-12 h-12 rounded-lg bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0'>
-                        <img src={form.imageUrl} alt='' className='w-full h-full object-cover'
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      <div className='relative w-12 h-12 rounded-lg bg-neutral-800 border border-neutral-700 overflow-hidden flex-shrink-0'>
+                        <Image src={form.imageUrl} alt='' fill className='object-cover' unoptimized />
                       </div>
                     )}
                     <div className='flex-1 flex gap-2'>
@@ -327,11 +327,9 @@ export default function AdminProductsPage() {
                   <div className='flex items-center justify-between gap-4'>
                     <div className='flex items-center gap-4 min-w-0 flex-1'>
                       {/* Image preview */}
-                      <div className='w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center flex-shrink-0 overflow-hidden border border-neutral-700'>
+                      <div className='relative w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center flex-shrink-0 overflow-hidden border border-neutral-700'>
                         {product.imageUrl && !brokenImages.has(product.id) ? (
-                          <img src={product.imageUrl} alt=''
-                            className='w-full h-full object-cover'
-                            onError={() => setBrokenImages(prev => new Set(prev).add(product.id))} />
+                          <Image src={product.imageUrl} alt='' fill className='object-cover' unoptimized />
                         ) : (
                           <ImageIcon className='w-5 h-5 text-neutral-500' />
                         )}

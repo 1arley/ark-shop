@@ -62,7 +62,6 @@ function getStatusConfig(status: OrderStatus) {
 }
 
 const CLIPBOARD_FEEDBACK_DURATION = 2000
-const DEFAULT_ORDERS_LIMIT = 50
 
 export default function DashboardPage() {
     const router = useRouter()

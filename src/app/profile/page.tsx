@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { Loader2, User, Mail, Camera, Save, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -124,9 +125,9 @@ export default function ProfilePage() {
                     {/* Avatar */}
                     <div className='flex items-center gap-6'>
                       <div className='relative'>
-                        <div className='w-20 h-20 rounded-full bg-neutral-800 border-2 border-neutral-700 overflow-hidden flex items-center justify-center'>
+                        <div className='relative w-20 h-20 rounded-full bg-neutral-800 border-2 border-neutral-700 overflow-hidden flex items-center justify-center'>
                           {avatarUrl ? (
-                            <img src={avatarUrl} alt='' className='w-full h-full object-cover' />
+                            <Image src={avatarUrl} alt='' fill className='object-cover' unoptimized />
                           ) : (
                             <User className='w-8 h-8 text-neutral-500' />
                           )}

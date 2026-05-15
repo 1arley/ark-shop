@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -271,9 +272,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                             transition={{ duration: 0.5 }}
                         >
                             <Card className='bg-slate-800/30 border-slate-700 overflow-hidden'>
-                                <div className='aspect-square bg-slate-700/30 flex items-center justify-center'>
+                                <div className='relative aspect-square bg-slate-700/30 flex items-center justify-center'>
                                     {product.imageUrl ? (
-                                        <img src={product.imageUrl} alt={product.name} className='object-cover w-full h-full' />
+                                        <Image src={product.imageUrl} alt={product.name} fill className='object-cover' unoptimized />
                                     ) : (
                                         <Package className='w-32 h-32 text-slate-600' />
                                     )}
@@ -547,9 +548,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                 >
                                     <Link href={`/products/${item.id}`}>
                                         <Card className='bg-slate-800/30 border-slate-700 hover:border-indigo-500/50 transition-all overflow-hidden group'>
-                                            <div className='aspect-square bg-slate-700/30 flex items-center justify-center'>
+                                            <div className='relative aspect-square bg-slate-700/30 flex items-center justify-center'>
                                                 {item.imageUrl ? (
-                                                    <img src={item.imageUrl} alt={item.name} className='object-cover w-full h-full' />
+                                                    <Image src={item.imageUrl} alt={item.name} fill className='object-cover' unoptimized />
                                                 ) : (
                                                     <Package className='w-16 h-16 text-slate-600' />
                                                 )}

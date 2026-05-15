@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
     Search,
@@ -395,7 +396,7 @@ function ProductsPageContent() {
                                                 <Card className='bg-neutral-900/50 border-neutral-800 hover:border-violet-500/30 transition-all overflow-hidden'>
                                                     <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : 'aspect-square'} bg-neutral-800/50 overflow-hidden`}>
                                                         {product.imageUrl ? (
-                                                            <img src={product.imageUrl} alt={product.name} className='object-cover w-full h-full' />
+                                                            <Image src={product.imageUrl} alt={product.name} fill className='object-cover' unoptimized />
                                                         ) : (
                                                             <div className='absolute inset-0 flex items-center justify-center text-neutral-700'>
                                                                 <Package className='w-12 h-12' />

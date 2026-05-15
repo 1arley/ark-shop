@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ShoppingCart, Package, Plus, Minus, Trash2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -72,9 +73,9 @@ export default function CartPage() {
                                             <CardContent className='p-6'>
                                                 <div className='flex gap-6'>
                                                     {/* Product Image */}
-                                                    <div className='w-24 h-24 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0'>
+                                                    <div className='relative w-24 h-24 bg-neutral-800 rounded-lg flex items-center justify-center flex-shrink-0'>
                                                         {item.image ? (
-                                                            <img src={item.image} alt={item.name} className='object-cover w-full h-full rounded-lg' />
+                                                            <Image src={item.image || ''} alt={item.name} fill className='object-cover rounded-lg' unoptimized />
                                                         ) : (
                                                             <Package className='w-12 h-12 text-neutral-600' />
                                                         )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -232,10 +233,11 @@ export default function CheckoutPage() {
                                     {payment.pixQrCode && (
                                         <div className='mb-6'>
                                             <div className='bg-white p-4 rounded-xl inline-block mb-4'>
-                                                <img
+                                                <Image
                                                     src={`data:image/png;base64,${payment.pixQrCode}`}
                                                     alt='PIX QR Code'
-                                                    className='w-48 h-48'
+                                                    width={192}
+                                                    height={192}
                                                 />
                                             </div>
                                         </div>

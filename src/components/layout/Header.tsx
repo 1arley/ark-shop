@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, Search, Menu, X, User, LogOut, Settings, Bell, Edit3, ChevronDown, LayoutDashboard } from 'lucide-react'
+import { ShoppingCart, Search, Menu, X, User, LogOut, Settings, Bell, Edit3, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/use-cart'
@@ -22,21 +22,8 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = React.useState('')
   const [scrolled, setScrolled] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
-  const [userMenuOpen, setUserMenuOpen] = React.useState(false)
-  const userMenuRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => { setMounted(true) }, [])
-
-  // Fecha o menu ao clicar fora
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   React.useEffect(() => {
     const handleScroll = () => {
