@@ -13,6 +13,7 @@ import {
     Copy,
     QrCode,
     AlertCircle,
+    Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,6 +27,20 @@ import type { Order, Payment } from '@/types/api'
 
 const PIX_COPY_FEEDBACK_DURATION = 3000
 const PAYMENT_POLL_INTERVAL = 5000
+const PIX_EXPIRATION_DAYS = 3
+
+function formatCountdown(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000)
+    const days = Math.floor(totalSeconds / 86400)
+    const hours = Math.floor((totalSeconds % 86400) / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
+    if (minutes > 0) return `${minutes}m ${seconds}s`
+    return `${seconds}s`
+}
 
 export default function CheckoutPage() {
     const router = useRouter()
@@ -44,6 +59,23 @@ export default function CheckoutPage() {
     const [pollingPayment, setPollingPayment] = useState(false)
     const [payerCpf, setPayerCpf] = useState('')
     const [payerBirthDate, setPayerBirthDate] = useState('')
+    const [timeLeft, setTimeLeft] = useState<number | null>(null)
+
+    // Countdown timer for PIX expiration (3 days from payment creation)
+    useEffect(() => {
+        if (!payment?.createdAt) return
+
+        const expiresAt = new Date(payment.createdAt).getTime() + PIX_EXPIRATION_DAYS * 24 * 60 * 60 * 1000
+
+        const updateTimer = () => {
+            const remaining = expiresAt - Date.now()
+            setTimeLeft(Math.max(0, remaining))
+        }
+
+        updateTimer()
+        const interval = setInterval(updateTimer, 1000)
+        return () => clearInterval(interval)
+    }, [payment?.createdAt])
 
     // Redirect to login if not authenticated
     useEffect(() => {
@@ -219,6 +251,25 @@ export default function CheckoutPage() {
                             <p className='text-neutral-400 mb-8'>
                                 Scan the QR code or copy the PIX code below
                             </p>
+
+                            {/* Countdown Timer */}
+                            {timeLeft !== null && timeLeft > 0 && (
+                                <div className='mb-6 inline-flex items-center gap-2 bg-neutral-900/80 border border-neutral-700 rounded-full px-4 py-2'>
+                                    <Clock className='w-4 h-4 text-amber-400' />
+                                    <span className='text-sm text-neutral-300'>
+                                        Expires in{' '}
+                                        <span className='text-white font-mono font-medium'>
+                                            {formatCountdown(timeLeft)}
+                                        </span>
+                                    </span>
+                                </div>
+                            )}
+                            {timeLeft !== null && timeLeft === 0 && (
+                                <div className='mb-6 inline-flex items-center gap-2 bg-red-900/20 border border-red-800 rounded-full px-4 py-2'>
+                                    <AlertCircle className='w-4 h-4 text-red-400' />
+                                    <span className='text-sm text-red-300'>PIX code expired</span>
+                                </div>
+                            )}
 
                             {error && (
                                 <div className='p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 mb-6 flex items-center gap-3'>
