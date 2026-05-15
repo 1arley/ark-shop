@@ -25,8 +25,6 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [activeFilter, setActiveFilter] = useState('')
-
-  // Form state
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -36,10 +34,9 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-
-const [deleting, setDeleting] = useState<string | null>(null)
-const [expandedId, setExpandedId] = useState<string | null>(null)
-const [showImportCsv, setShowImportCsv] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [showImportCsv, setShowImportCsv] = useState(false)
 
   const fetchProducts = async () => {
     try {
@@ -61,12 +58,13 @@ const [showImportCsv, setShowImportCsv] = useState(false)
   useEffect(() => {
     fetchProducts()
     fetchCategories()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => fetchProducts(), 300)
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
   const filtered = products.filter(p => {
@@ -154,19 +152,18 @@ const [showImportCsv, setShowImportCsv] = useState(false)
     }
   }
 
-const toggleActive = async (product: Product) => {
-  try {
-    await apiClient.admin.updateProduct(product.id, { isActive: !product.isActive })
-    await fetchProducts()
-  } catch { }
-}
+  const toggleActive = async (product: Product) => {
+    try {
+      await apiClient.admin.updateProduct(product.id, { isActive: !product.isActive })
+      await fetchProducts()
+    } catch { }
+  }
 
-const handleImportSuccess = (importedCount: number) => {
-  fetchProducts()
-  // Optionally show success message
-}
+  const handleImportSuccess = () => {
+    fetchProducts()
+  }
 
-const categoryName = (id: string | null) => categories.find(c => c.id === id)?.name || 'Uncategorized'
+  const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name || 'Uncategorized'
 
   return (
     <motion.div variants={container} initial='hidden' animate='show'>
@@ -207,12 +204,14 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
         <div className='flex items-center gap-2'>
           <Filter className='w-4 h-4 text-neutral-500' />
           <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-            className='bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white'>
+            className='bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white'
+          >
             <option value=''>All Categories</option>
             {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
           </select>
           <select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)}
-            className='bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white'>
+            className='bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white'
+          >
             <option value=''>All Status</option>
             <option value='active'>Active</option>
             <option value='inactive'>Inactive</option>
@@ -256,7 +255,8 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                 <div>
                   <label className='block text-xs text-neutral-500 mb-1'>Category</label>
                   <select value={form.categoryId} onChange={(e) => setForm(p => ({ ...p, categoryId: e.target.value }))}
-                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white'>
+                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white'
+                  >
                     <option value=''>Uncategorized</option>
                     {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                   </select>
@@ -302,7 +302,8 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
 
               <div className='flex gap-2'>
                 <Button onClick={handleSave} disabled={saving}
-                  className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'>
+                  className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                >
                   {saving ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Save className='w-4 h-4 mr-2' />}
                   {editingId ? 'Update' : 'Create'}
                 </Button>
@@ -341,7 +342,6 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                 <div className='p-4'>
                   <div className='flex items-center justify-between gap-4'>
                     <div className='flex items-center gap-4 min-w-0 flex-1'>
-                      {/* Image preview */}
                       <div className='relative w-12 h-12 rounded-lg bg-neutral-800 flex items-center justify-center flex-shrink-0 overflow-hidden border border-neutral-700'>
                         {product.imageUrl ? (
                           <Image src={product.imageUrl} alt='' fill className='object-cover' unoptimized />
@@ -359,7 +359,7 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                         </div>
                         <div className='flex items-center gap-3 text-xs text-neutral-500 mt-1 flex-wrap'>
                           <span className='flex items-center gap-1'>
-                            <Tag className='w-3 h-3' />{categoryName(product.categoryId)}
+                            <Tag className='w-3 h-3' />{getCategoryName(product.categoryId)}
                           </span>
                           <span className='flex items-center gap-1'>
                             <DollarSign className='w-3 h-3' />R$ {formatPrice(product.price)}
@@ -384,13 +384,15 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                       </Button>
                       <Button size='sm' variant='outline'
                         onClick={() => startEdit(product)}
-                        className='border-neutral-700 text-neutral-400 hover:text-white'>
+                        className='border-neutral-700 text-neutral-400 hover:text-white'
+                      >
                         <Edit3 className='w-3.5 h-3.5' />
                       </Button>
                       <Button size='sm' variant='outline'
                         onClick={() => handleDelete(product.id)}
                         disabled={deleting === product.id}
-                        className='border-neutral-700 text-neutral-400 hover:text-red-400'>
+                        className='border-neutral-700 text-neutral-400 hover:text-red-400'
+                      >
                         {deleting === product.id
                           ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
                           : <Trash2 className='w-3.5 h-3.5' />
@@ -399,7 +401,6 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                     </div>
                   </div>
 
-                  {/* Expandable description */}
                   {product.description && (
                     <div className='mt-3'>
                       <button
@@ -419,15 +420,19 @@ const categoryName = (id: string | null) => categories.find(c => c.id === id)?.n
                       )}
                     </div>
                   )}
-      </div>
-    </motion.div>
+                </div>
+              </motion.div>
+            )
+          })}
 
-    {/* Import CSV Modal */}
-    <ImportCsvModal
-      isOpen={showImportCsv}
-      onClose={() => setShowImportCsv(false)}
-      onSuccess={handleImportSuccess}
-    />
-  </motion.div>
+          {/* Import CSV Modal */}
+          <ImportCsvModal
+            isOpen={showImportCsv}
+            onClose={() => setShowImportCsv(false)}
+            onSuccess={handleImportSuccess}
+          />
+        </div>
+      )}
+    </motion.div>
   )
 }
