@@ -141,7 +141,7 @@ export interface CreateOrderPayload {
 
 // --- Payments ---
 
-export type PaymentProvider = 'MERCADO_PAGO'
+export type PaymentProvider = 'ASAAS' | 'MERCADO_PAGO' | 'STRIPE'
 export type PaymentMethod = 'PIX'
 export type PaymentStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REFUNDED' | 'CANCELLED'
 

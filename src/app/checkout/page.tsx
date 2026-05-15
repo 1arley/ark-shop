@@ -101,7 +101,7 @@ export default function CheckoutPage() {
             // 2. Create PIX payment
             const paymentResponse = await apiClient.payments.create(createdOrder.id, {
                 amount: Number(createdOrder.total),
-                provider: 'MERCADO_PAGO',
+                provider: 'ASAAS',
                 method: 'PIX',
                 payerCpf: payerCpf.replace(/\D/g, '') || undefined,
                 payerBirthDate: payerBirthDate || undefined,
