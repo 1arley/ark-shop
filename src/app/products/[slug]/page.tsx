@@ -5,17 +5,18 @@ import Image from 'next/image'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
-    ShoppingCart,
-    CheckCircle2,
-    Truck,
-    Shield,
-    Download,
-    Package,
-    Loader2,
-    Key,
-    Save,
-    Plus,
-    Edit2,
+  ShoppingCart,
+  CheckCircle2,
+  Truck,
+  Shield,
+  Download,
+  Package,
+  Loader2,
+  Key,
+  Save,
+  Plus,
+  Edit2,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,12 +44,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     // Admin: categories for editing
     const [categories, setCategories] = useState<Category[]>([])
 
-    // Admin: edit mode
-    const [editing, setEditing] = useState(false)
-    const [editForm, setEditForm] = useState({ name: '', description: '', price: '', stock: '', categoryId: '', imageUrl: '' })
-    const [saving, setSaving] = useState(false)
-    const [saveError, setSaveError] = useState<string | null>(null)
-    const [saveSuccess, setSaveSuccess] = useState(false)
+  // Admin: edit mode
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', description: '', price: '', stock: '', categoryId: '', imageUrl: '' })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
     // Admin: key management
     const [keyBatch, setKeyBatch] = useState('')
@@ -158,22 +161,46 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         setSaving(false)
     }
 
-    // Admin: add keys
-    const handleAddKeys = async () => {
-        if (!product || !keyBatch.trim()) return
-        setAddingKeys(true)
-        setKeyError(null)
-        setKeySuccess(null)
-        try {
-            const keysList = keyBatch.split('\n').map(k => k.trim()).filter(Boolean)
-            const res = await apiClient.admin.addKeys(product.id, keysList)
-            setKeySuccess(`${res.data.count} key(s) added successfully!`)
-            setKeyBatch('')
-        } catch (err) {
-            setKeyError(extractApiError(err, 'Failed to add keys'))
-        }
-        setAddingKeys(false)
+  // Admin: upload image
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Only image files are allowed')
+      return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File must be under 5MB')
+      return
+    }
+
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const res = await apiClient.upload.single(file, 'products')
+      setEditForm(prev => ({ ...prev, imageUrl: res.data.url }))
+    } catch {
+      setUploadError('Upload failed')
+    }
+    setUploading(false)
+  }
+
+  // Admin: add keys
+  const handleAddKeys = async () => {
+    if (!product || !keyBatch.trim()) return
+    setAddingKeys(true)
+    setKeyError(null)
+    setKeySuccess(null)
+    try {
+      const keysList = keyBatch.split('\n').map(k => k.trim()).filter(Boolean)
+      const res = await apiClient.admin.addKeys(product.id, keysList)
+      setKeySuccess(`${res.data.count} key(s) added successfully!`)
+      setKeyBatch('')
+    } catch (err) {
+      setKeyError(extractApiError(err, 'Failed to add keys'))
+    }
+    setAddingKeys(false)
+  }
 
     if (isLoading) {
         return (
@@ -325,19 +352,50 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                                             <Input type='number' value={editForm.stock} onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className='text-sm text-slate-400 mb-1 block'>Category</label>
-                                        <select value={editForm.categoryId} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white text-sm'>
-                                            <option value=''>No category</option>
-                                            {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className='text-sm text-slate-400 mb-1 block'>Image URL</label>
-                                        <Input value={editForm.imageUrl} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} className='bg-slate-800 border-slate-600 text-white' />
-                                    </div>
+              <div>
+                <label className='text-sm text-slate-400 mb-1 block'>Category</label>
+                <select value={editForm.categoryId} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })} className='w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white text-sm'>
+                  <option value=''>No category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className='text-sm text-slate-400 mb-1 block'>Image</label>
+                <div className='flex items-center gap-3'>
+                  {editForm.imageUrl && (
+                    <div className='relative w-16 h-16 rounded-lg bg-slate-800 border border-slate-600 overflow-hidden flex-shrink-0'>
+                      <Image src={editForm.imageUrl} alt='' fill className='object-cover' unoptimized />
+                    </div>
+                  )}
+                  <div className='flex-1 flex gap-2'>
+                    <Input
+                      value={editForm.imageUrl}
+                      onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                      placeholder='Paste URL or upload...'
+                      className='flex-1 bg-slate-800 border-slate-600 text-white'
+                    />
+                    <label className='flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600/10 text-indigo-400 border border-indigo-600/20 hover:bg-indigo-600/20 cursor-pointer text-sm whitespace-nowrap transition-colors'>
+                      {uploading ? (
+                        <Loader2 className='w-4 h-4 animate-spin' />
+                      ) : (
+                        <Upload className='w-4 h-4' />
+                      )}
+                      <span className='hidden sm:inline'>Upload</span>
+                      <input
+                        type='file'
+                        accept='image/jpeg,image/png,image/webp,image/gif'
+                        onChange={handleImageUpload}
+                        className='hidden'
+                      />
+                    </label>
+                  </div>
+                </div>
+                {uploadError && (
+                  <p className='text-red-400 text-xs mt-1'>{uploadError}</p>
+                )}
+              </div>
                                     <div className='flex gap-3 pt-2'>
                                         <Button onClick={handleSave} disabled={saving} className='bg-indigo-600 hover:bg-indigo-500'>
                                             {saving ? <Loader2 className='w-4 h-4 animate-spin' /> : <><Save className='w-4 h-4 mr-2' />Save Changes</>}
