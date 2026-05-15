@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Package, Search, Loader2, Plus, Trash2, Save, X,
   Edit3, Eye, EyeOff, Filter, Tag,
-  DollarSign, Layers, ImageIcon, Upload
+  DollarSign, Layers, ImageIcon, Upload, FileUp
 } from 'lucide-react'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { apiClient } from '@/services/api'
 import { formatPrice, extractApiError } from '@/lib/utils'
 import type { Product, Category } from '@/types/api'
+import { ImportCsvModal } from '@/components/admin/products/ImportCsvModal'
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }
 const itemAnim = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }
@@ -36,8 +37,9 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+const [deleting, setDeleting] = useState<string | null>(null)
+const [expandedId, setExpandedId] = useState<string | null>(null)
+const [showImportCsv, setShowImportCsv] = useState(false)
 
   const fetchProducts = async () => {
     try {
@@ -152,14 +154,19 @@ export default function AdminProductsPage() {
     }
   }
 
-  const toggleActive = async (product: Product) => {
-    try {
-      await apiClient.admin.updateProduct(product.id, { isActive: !product.isActive })
-      await fetchProducts()
-    } catch { }
-  }
+const toggleActive = async (product: Product) => {
+  try {
+    await apiClient.admin.updateProduct(product.id, { isActive: !product.isActive })
+    await fetchProducts()
+  } catch { }
+}
 
-  const categoryName = (id: string | null) => categories.find(c => c.id === id)?.name || 'Uncategorized'
+const handleImportSuccess = (importedCount: number) => {
+  fetchProducts()
+  // Optionally show success message
+}
+
+const categoryName = (id: string | null) => categories.find(c => c.id === id)?.name || 'Uncategorized'
 
   return (
     <motion.div variants={container} initial='hidden' animate='show'>
@@ -169,13 +176,22 @@ export default function AdminProductsPage() {
           <h1 className='text-2xl font-bold text-white'>Products</h1>
           <p className='text-neutral-400 text-sm mt-1'>{products.length} products</p>
         </div>
-        <Button
-          onClick={() => { resetForm(); setShowForm(!showForm) }}
-          className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
-        >
-          <Plus className='w-4 h-4 mr-2' />
-          {showForm ? 'Cancel' : 'Add Product'}
-        </Button>
+        <div className='flex gap-2'>
+          <Button
+            onClick={() => setShowImportCsv(true)}
+            className='bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30'
+          >
+            <FileUp className='w-4 h-4 mr-2' />
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => { resetForm(); setShowForm(!showForm) }}
+            className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+          >
+            <Plus className='w-4 h-4 mr-2' />
+            {showForm ? 'Cancel' : 'Add Product'}
+          </Button>
+        </div>
       </motion.div>
 
       {/* Filters */}
@@ -403,12 +419,15 @@ export default function AdminProductsPage() {
                       )}
                     </div>
                   )}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      )}
+      </div>
     </motion.div>
+
+    {/* Import CSV Modal */}
+    <ImportCsvModal
+      isOpen={showImportCsv}
+      onClose={() => setShowImportCsv(false)}
+      onSuccess={handleImportSuccess}
+    />
+  </motion.div>
   )
 }
