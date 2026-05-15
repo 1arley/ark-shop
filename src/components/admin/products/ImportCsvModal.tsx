@@ -51,32 +51,33 @@ export function ImportCsvModal({
     setLoading(true);
     setError(null);
 
+    // Helper to read file as text using a Promise
+    const readFile = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Erro ao ler arquivo CSV'));
+        reader.readAsText(file, 'latin1');
+      });
+    };
+
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const csvContent = event.target?.result as string;
+      const csvContent = await readFile(file);
+      const response = await apiClient.post<{ imported: number; failed: number; products: Product[]; errors: string[] }>('/products/import', {
+        csvContent,
+        categoryId: categoryId || undefined,
+        isActive: true,
+      });
 
-        const response = await apiClient.post<{ imported: number; failed: number; products: Product[]; errors: string[] }>('/products/import', {
-            csvContent,
-            categoryId: categoryId || undefined,
-            isActive: true,
-          });
-
-        onSuccess?.(response.data.imported);
-        onClose();
-      };
-
-      reader.onerror = () => {
-        setError('Erro ao ler arquivo CSV');
-        setLoading(false);
-      };
-
-      reader.readAsText(file, 'latin1');
+      onSuccess?.(response.data.imported);
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao importar CSV');
+    } finally {
       setLoading(false);
     }
   };
+
 
 const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
   e.preventDefault();
