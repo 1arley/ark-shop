@@ -424,15 +424,15 @@ export default function AdminProductsPage() {
               </motion.div>
             )
           })}
-
-          {/* Import CSV Modal */}
-          <ImportCsvModal
-            isOpen={showImportCsv}
-            onClose={() => setShowImportCsv(false)}
-            onSuccess={handleImportSuccess}
-          />
         </div>
       )}
+
+      {/* Import CSV Modal - must be outside conditional to always be in DOM */}
+      <ImportCsvModal
+        isOpen={showImportCsv}
+        onClose={() => setShowImportCsv(false)}
+        onSuccess={handleImportSuccess}
+      />
     </motion.div>
   )
 }
