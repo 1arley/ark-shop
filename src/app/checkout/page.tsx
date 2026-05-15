@@ -61,11 +61,11 @@ export default function CheckoutPage() {
     const [payerBirthDate, setPayerBirthDate] = useState('')
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
-    // Countdown timer for PIX expiration (3 days from payment creation)
+    // Countdown timer for PIX expiration (uses real expiresAt from backend)
     useEffect(() => {
-        if (!payment?.createdAt) return
+        if (!payment?.expiresAt) return
 
-        const expiresAt = new Date(payment.createdAt).getTime() + PIX_EXPIRATION_DAYS * 24 * 60 * 60 * 1000
+        const expiresAt = new Date(payment.expiresAt).getTime()
 
         const updateTimer = () => {
             const remaining = expiresAt - Date.now()
@@ -75,7 +75,7 @@ export default function CheckoutPage() {
         updateTimer()
         const interval = setInterval(updateTimer, 1000)
         return () => clearInterval(interval)
-    }, [payment?.createdAt])
+    }, [payment?.expiresAt])
 
     // Redirect to login if not authenticated
     useEffect(() => {
