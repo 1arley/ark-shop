@@ -4,8 +4,11 @@ import type {
   AuthUser,
   LoginPayload,
   RegisterPayload,
+  RegisterResponse,
   ResetPasswordPayload,
   UpdateProfilePayload,
+  VerifyEmailPayload,
+  VerifyEmailResponse,
   Product,
   ProductListParams,
   Category,
@@ -483,6 +486,12 @@ class ApiClientClass {
 
     resetPassword: (payload: ResetPasswordPayload) =>
       this.post<{ message: string }>('/auth/reset-password', payload as unknown as Record<string, unknown>),
+
+    verifyEmail: (payload: VerifyEmailPayload) =>
+      this.post<VerifyEmailResponse>('/auth/verify-email', payload as unknown as Record<string, unknown>),
+
+    resendVerification: (email: string) =>
+      this.post<{ message: string }>('/auth/resend-verification', { email }),
   }
 
   // --- User Profile ---

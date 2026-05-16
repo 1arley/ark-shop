@@ -32,6 +32,22 @@ export interface RegisterPayload {
   name: string
 }
 
+export interface RegisterResponse {
+  message: string
+  user: AuthUser
+  emailVerificationRequired: boolean
+}
+
+export interface VerifyEmailPayload {
+  email: string
+  code: string
+}
+
+export interface VerifyEmailResponse {
+  message: string
+  emailVerified: boolean
+}
+
 // --- Products ---
 
 export interface Product {

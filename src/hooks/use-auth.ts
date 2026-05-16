@@ -62,13 +62,15 @@ export function useAuth() {
       try {
         setLoading(true)
         const response = await apiClient.auth.register({ email, password, name })
-        const { access_token, refresh_token, user: userData } = response.data
+        const { user: userData, emailVerificationRequired } = response.data
 
-        apiClient.setToken(access_token)
-        apiClient.setRefreshToken(refresh_token)
         setUser(userData)
 
-        return { success: true }
+        return {
+          success: true,
+          emailVerificationRequired,
+          email,
+        }
       } catch (error) {
         return { success: false, error: extractApiError(error, 'Registration failed') }
       } finally {

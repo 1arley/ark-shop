@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,6 +18,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const { login, isLoading } = useAuth()
   const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const verified = searchParams.get('verified') === 'true'
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +82,13 @@ function LoginForm() {
                   {error && (
                     <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm'>
                       {error}
+                    </div>
+                  )}
+
+                  {verified && (
+                    <div className='p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm flex items-start gap-2'>
+                      <CheckCircle2 className='w-4 h-4 mt-0.5 flex-shrink-0' />
+                      <span>Email verified successfully! You can now sign in.</span>
                     </div>
                   )}
 

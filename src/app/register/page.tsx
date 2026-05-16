@@ -41,7 +41,7 @@ function RegisterForm() {
 
     const result = await registerUser(formData.email, formData.password, formData.name)
     if (result.success) {
-      router.push(redirectTo)
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
     } else {
       setError(result.error || 'Registration failed')
     }
