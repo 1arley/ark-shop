@@ -19,6 +19,7 @@ function LoginForm() {
   const { login, isLoading } = useAuth()
   const redirectTo = searchParams.get('redirect') || '/dashboard'
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
@@ -35,7 +36,7 @@ function LoginForm() {
       return
     }
 
-    const result = await login(formData.email, formData.password)
+    const result = await login(formData.email, formData.password, rememberMe)
     if (result.success) {
       router.push(redirectTo)
     } else {
@@ -125,6 +126,20 @@ function LoginForm() {
                         {showPassword ? <EyeOff className='w-5 h-5' /> : <Eye className='w-5 h-5' />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Remember Me */}
+                  <div className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      id='rememberMe'
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className='w-4 h-4 rounded bg-neutral-800 border-neutral-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 cursor-pointer'
+                    />
+                    <label htmlFor='rememberMe' className='text-sm text-neutral-400 cursor-pointer select-none'>
+                      Lembrar de mim (30 dias)
+                    </label>
                   </div>
 
                   {/* Submit Button */}

@@ -36,14 +36,15 @@ export function useAuth() {
   }, [])
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, rememberMe = false) => {
       try {
         setLoading(true)
-        const response = await apiClient.auth.login({ email, password })
+        const response = await apiClient.auth.login({ email, password, rememberMe })
         const { access_token, refresh_token, user: userData } = response.data
 
         apiClient.setToken(access_token)
         apiClient.setRefreshToken(refresh_token)
+        apiClient.setRememberMe(rememberMe)
         setUser(userData)
 
         return { success: true }

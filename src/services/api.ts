@@ -51,12 +51,24 @@ class ApiClientClass {
   private baseURL: string
   private token: string | null = null
   private refreshToken: string | null = null
+  private rememberMe = false
   private isRefreshing = false
   private refreshQueue: Array<{
     resolve: (token: string) => void
     reject: (error: Error) => void
   }> = []
   private refreshQueueTimeout: ReturnType<typeof setTimeout> | null = null
+
+  // Auto-refresh tracking
+  private autoRefreshTimer: ReturnType<typeof setInterval> | null = null
+  private inactivityTimer: ReturnType<typeof setTimeout> | null = null
+  private lastActivity = Date.now()
+  private tokenExpiryTime: number | null = null
+
+  // Timings (in ms)
+  private readonly ACCESS_TOKEN_LIFETIME = 30 * 60 * 1000 // 30 minutes
+  private readonly REFRESH_BEFORE_EXPIRY = 5 * 60 * 1000 // 5 minutes before
+  private readonly INACTIVITY_TIMEOUT = 10 * 60 * 1000 // 10 minutes of inactivity
 
   constructor() {
     this.baseURL = env.NEXT_PUBLIC_API_URL
@@ -67,6 +79,13 @@ class ApiClientClass {
       if (stored) this.token = stored
       const storedRefresh = localStorage.getItem('auth_refresh_token')
       if (storedRefresh) this.refreshToken = storedRefresh
+      const storedRemember = localStorage.getItem('auth_remember_me')
+      if (storedRemember) this.rememberMe = storedRemember === 'true'
+
+      // Start auto-refresh if we have a token
+      if (this.token) {
+        this.startAutoRefresh()
+      }
     }
   }
 
@@ -75,8 +94,11 @@ class ApiClientClass {
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('auth_token', token)
+        // Set expiry time: 30 minutes from now
+        this.tokenExpiryTime = Date.now() + this.ACCESS_TOKEN_LIFETIME
       } else {
         localStorage.removeItem('auth_token')
+        this.tokenExpiryTime = null
       }
     }
   }
@@ -92,6 +114,23 @@ class ApiClientClass {
     }
   }
 
+  setRememberMe(remember: boolean) {
+    this.rememberMe = remember
+    if (typeof window !== 'undefined') {
+      if (remember) {
+        localStorage.setItem('auth_remember_me', 'true')
+      } else {
+        localStorage.removeItem('auth_remember_me')
+      }
+    }
+  }
+
+  getRememberMe(): boolean {
+    if (typeof window === 'undefined') return false
+    const stored = localStorage.getItem('auth_remember_me')
+    return stored === 'true' || this.rememberMe
+  }
+
   getToken(): string | null {
     if (typeof window === 'undefined') return null
     return this.token || localStorage.getItem('auth_token') || null
@@ -105,9 +144,92 @@ class ApiClientClass {
   clearAuth() {
     this.token = null
     this.refreshToken = null
+    this.rememberMe = false
+    this.tokenExpiryTime = null
+    this.stopAutoRefresh()
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_refresh_token')
+      localStorage.removeItem('auth_remember_me')
+    }
+  }
+
+  /**
+   * Start auto-refresh timer that checks every minute if token needs refresh.
+   * Also tracks user activity to prevent refresh when inactive.
+   */
+  private startAutoRefresh() {
+    this.stopAutoRefresh()
+
+    // Check every minute
+    this.autoRefreshTimer = setInterval(() => {
+      this.checkAndRefreshToken()
+    }, 60 * 1000)
+
+    // Track user activity
+    this.setupActivityTracking()
+  }
+
+  private stopAutoRefresh() {
+    if (this.autoRefreshTimer) {
+      clearInterval(this.autoRefreshTimer)
+      this.autoRefreshTimer = null
+    }
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer)
+      this.inactivityTimer = null
+    }
+  }
+
+  private setupActivityTracking() {
+    if (typeof window === 'undefined') return
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
+
+    const handleActivity = () => {
+      this.lastActivity = Date.now()
+
+      // Reset inactivity timer
+      if (this.inactivityTimer) {
+        clearTimeout(this.inactivityTimer)
+      }
+    }
+
+    events.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true })
+    })
+  }
+
+  /**
+   * Check if token needs refresh and perform refresh if user is active.
+   */
+  private async checkAndRefreshToken() {
+    if (!this.token || !this.tokenExpiryTime) return
+
+    const timeUntilExpiry = this.tokenExpiryTime - Date.now()
+    const timeSinceActivity = Date.now() - this.lastActivity
+
+    // If user has been inactive for too long, log them out
+    if (timeSinceActivity > this.INACTIVITY_TIMEOUT) {
+      // Only auto-logout if NOT rememberMe
+      if (!this.getRememberMe()) {
+        console.log('[ApiClient] User inactive for 10 minutes, logging out')
+        this.clearAuth()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?reason=inactivity'
+        }
+        return
+      }
+    }
+
+    // If token expires within 5 minutes, refresh it
+    if (timeUntilExpiry < this.REFRESH_BEFORE_EXPIRY && timeUntilExpiry > 0) {
+      console.log('[ApiClient] Token expiring soon, refreshing...')
+      try {
+        await this.tryRefreshToken()
+      } catch {
+        // Refresh failed — will be handled by request interceptor
+      }
     }
   }
 
