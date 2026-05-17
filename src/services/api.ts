@@ -459,7 +459,7 @@ class ApiClientClass {
       this.post<AuthResponse>('/auth/login', payload as unknown as Record<string, unknown>),
 
     register: (payload: RegisterPayload) =>
-      this.post<AuthResponse>('/auth/register', payload as unknown as Record<string, unknown>),
+      this.post<RegisterResponse>('/auth/register', payload as unknown as Record<string, unknown>),
 
     me: () =>
       this.get<AuthUser>('/auth/me', { requiresAuth: true }),

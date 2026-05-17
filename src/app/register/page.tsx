@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react'
@@ -16,9 +16,7 @@ import SectionHero from '@/components/layout/SectionHero'
 
 function RegisterForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { register: registerUser, isLoading } = useAuth()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
