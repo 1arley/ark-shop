@@ -19,7 +19,6 @@ import {
   Hash,
   Infinity as InfinityIcon,
 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AnimatedForm } from '@/components/ui/animated-form'
@@ -28,7 +27,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { apiClient } from '@/services/api'
 import { extractApiError } from '@/lib/utils'
-import type { Coupon, CreateCouponPayload, PaginatedResponseMeta } from '@/types/api'
+import type { Coupon, CreateCouponPayload } from '@/types/api'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
