@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   Users, Search, Loader2, Shield, ShieldCheck,
   ShieldAlert, Trash2, Save, X, Mail, Calendar,
-  ShoppingBag, CreditCard
+  ShoppingBag, CreditCard, ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -154,7 +155,10 @@ export default function AdminUsersPage() {
                           </div>
                         ) : (
                           <>
-                            <div className='text-sm font-medium text-white truncate'>{user.name || 'No name'}</div>
+                            <Link href={`/admin/users/${user.id}`} className='text-sm font-medium text-white truncate hover:text-violet-400 transition-colors flex items-center gap-1'>
+                              {user.name || 'No name'}
+                              <ChevronRight className='w-3 h-3 text-neutral-600' />
+                            </Link>
                             <div className='flex items-center gap-3 text-xs text-neutral-500 mt-1'>
                               <span className='flex items-center gap-1'><Mail className='w-3 h-3' />{user.email}</span>
                               <span className='flex items-center gap-1'><Calendar className='w-3 h-3' />{new Date(user.createdAt).toLocaleDateString()}</span>

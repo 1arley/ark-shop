@@ -14,6 +14,9 @@ import {
     QrCode,
     AlertCircle,
     Clock,
+    Tag,
+    X,
+    Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -59,6 +62,13 @@ export default function CheckoutPage() {
     const [payerCpf, setPayerCpf] = useState('')
     const [payerBirthDate, setPayerBirthDate] = useState('')
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
+
+    // Coupon state
+    const [couponCode, setCouponCode] = useState('')
+    const [validatingCoupon, setValidatingCoupon] = useState(false)
+    const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; type: string; value: number } | null>(null)
+    const [couponError, setCouponError] = useState<string | null>(null)
+    const [couponSuccess, setCouponSuccess] = useState<string | null>(null)
 
     // Countdown timer for PIX expiration (uses real expiresAt from backend)
     useEffect(() => {
@@ -116,6 +126,44 @@ export default function CheckoutPage() {
         return () => clearInterval(interval)
     }, [payment, completed, pollingPayment, clearCart])
 
+    const handleValidateCoupon = async () => {
+        if (!couponCode.trim()) return
+        setValidatingCoupon(true)
+        setCouponError(null)
+        setCouponSuccess(null)
+
+        try {
+            const response = await apiClient.coupons.validate({
+                code: couponCode.toUpperCase().trim(),
+                subtotal,
+            })
+            const result = response.data
+
+            if (result.valid) {
+                setAppliedCoupon({
+                    code: result.coupon.code,
+                    discountAmount: result.discountAmount,
+                    type: result.coupon.type,
+                    value: result.coupon.value,
+                })
+                setCouponSuccess(result.message || `Coupon applied! Discount: R$ ${formatPrice(result.discountAmount)}`)
+                setCouponCode('')
+            } else {
+                setCouponError(result.message || 'Invalid coupon')
+            }
+        } catch (err) {
+            setCouponError(extractApiError(err, 'Failed to validate coupon'))
+        } finally {
+            setValidatingCoupon(false)
+        }
+    }
+
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null)
+        setCouponError(null)
+        setCouponSuccess(null)
+    }
+
     const handleCreateOrder = async () => {
         if (cartItems.length === 0) return
 
@@ -129,13 +177,15 @@ export default function CheckoutPage() {
                     productId: item.productId,
                     quantity: item.quantity,
                 })),
+                couponCode: appliedCoupon?.code || undefined,
             })
             const createdOrder = orderResponse.data
             setOrder(createdOrder)
 
             // 2. Create PIX payment
+            const paymentAmount = appliedCoupon ? subtotal - appliedCoupon.discountAmount : Number(createdOrder.total)
             const paymentResponse = await apiClient.payments.create(createdOrder.id, {
-                amount: Number(createdOrder.total),
+                amount: paymentAmount,
                 provider: 'ASAAS',
                 method: 'PIX',
                 payerCpf: payerCpf.replace(/\D/g, '') || undefined,
@@ -194,6 +244,18 @@ export default function CheckoutPage() {
                                             <span className='text-neutral-400'>Order ID</span>
                                             <span className='text-white font-mono text-sm'>{order.id.slice(0, 8).toUpperCase()}</span>
                                         </div>
+                                        {order.couponCode && (
+                                            <div className='flex justify-between items-center'>
+                                                <span className='text-neutral-400'>Coupon</span>
+                                                <span className='text-emerald-400 font-mono text-sm'>{order.couponCode}</span>
+                                            </div>
+                                        )}
+                                        {order.discount && order.discount > 0 && (
+                                            <div className='flex justify-between items-center'>
+                                                <span className='text-neutral-400'>Discount</span>
+                                                <span className='text-emerald-400'>- R$ {formatPrice(order.discount)}</span>
+                                            </div>
+                                        )}
                                         <div className='flex justify-between items-center'>
                                             <span className='text-neutral-400'>Delivery Method</span>
                                             <span className='text-emerald-400'>Email + Dashboard</span>
@@ -479,19 +541,77 @@ export default function CheckoutPage() {
                                         </div>
                                     </div>
 
+                                    {/* Coupon Section */}
+                                    <div className='border-t border-neutral-800 pt-4 mb-6'>
+                                        <h4 className='text-sm font-medium text-white mb-3 flex items-center gap-2'>
+                                            <Tag className='w-4 h-4 text-violet-400' />
+                                            Coupon
+                                        </h4>
+                                        {appliedCoupon ? (
+                                            <div className='flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg'>
+                                                <div className='flex items-center gap-2'>
+                                                    <Check className='w-4 h-4 text-emerald-400' />
+                                                    <span className='text-sm text-emerald-400 font-mono'>{appliedCoupon.code}</span>
+                                                    <span className='text-xs text-neutral-400'>
+                                                        ({appliedCoupon.type === 'PERCENTAGE' ? `${appliedCoupon.value}%` : `R$ ${formatPrice(appliedCoupon.value)}`})
+                                                    </span>
+                                                </div>
+                                                <button onClick={handleRemoveCoupon} className='text-neutral-500 hover:text-red-400 transition-colors'>
+                                                    <X className='w-4 h-4' />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className='flex gap-2'>
+                                                <input
+                                                    type='text'
+                                                    value={couponCode}
+                                                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null) }}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleValidateCoupon() }}
+                                                    placeholder='Enter code'
+                                                    className='flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-violet-500/50 focus:outline-none font-mono uppercase'
+                                                    disabled={validatingCoupon}
+                                                />
+                                                <Button
+                                                    size='sm'
+                                                    onClick={handleValidateCoupon}
+                                                    disabled={validatingCoupon || !couponCode.trim()}
+                                                    className='bg-violet-600 hover:bg-violet-500 flex-shrink-0'
+                                                >
+                                                    {validatingCoupon ? <Loader2 className='w-4 h-4 animate-spin' /> : 'Apply'}
+                                                </Button>
+                                            </div>
+                                        )}
+                                        {couponError && (
+                                            <p className='text-xs text-red-400 mt-2 flex items-center gap-1'>
+                                                <AlertCircle className='w-3 h-3' />{couponError}
+                                            </p>
+                                        )}
+                                        {couponSuccess && !appliedCoupon && (
+                                            <p className='text-xs text-emerald-400 mt-2'>{couponSuccess}</p>
+                                        )}
+                                    </div>
+
                                     {/* Totals */}
                                     <div className='space-y-3 mb-6'>
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Subtotal</span>
                                             <span>R$ {formatPrice(subtotal)}</span>
                                         </div>
+                                        {appliedCoupon && (
+                                            <div className='flex justify-between text-emerald-400'>
+                                                <span>Discount ({appliedCoupon.code})</span>
+                                                <span>- R$ {formatPrice(appliedCoupon.discountAmount)}</span>
+                                            </div>
+                                        )}
                                         <div className='flex justify-between text-neutral-400'>
                                             <span>Delivery</span>
                                             <span className='text-emerald-400'>Free</span>
                                         </div>
                                         <div className='border-t border-neutral-800 pt-3 flex justify-between'>
                                             <span className='font-semibold text-white'>Total</span>
-                                            <span className='text-2xl font-bold text-white'>R$ {mounted ? formatPrice(total) : '0.00'}</span>
+                                            <span className='text-2xl font-bold text-white'>
+                                                R$ {mounted ? formatPrice(appliedCoupon ? subtotal - appliedCoupon.discountAmount : total) : '0.00'}
+                                            </span>
                                         </div>
                                     </div>
 

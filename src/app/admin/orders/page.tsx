@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   ShoppingBag, Search, Loader2, Filter, ChevronDown,
   ChevronUp, CheckCircle, XCircle, Send, Wallet,
-  Download, Copy, CheckCircle2, AlertCircle, DollarSign
+  Download, Copy, CheckCircle2, AlertCircle, DollarSign,
+  ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -197,9 +199,10 @@ export default function AdminOrdersPage() {
                   <div className='flex items-center justify-between flex-wrap gap-3'>
                     <div className='flex items-center gap-4 min-w-0'>
                       <div>
-                        <div className='font-mono text-sm text-amber-400 mb-0.5'>
+                        <Link href={`/admin/orders/${order.id}`} onClick={(e) => e.stopPropagation()} className='font-mono text-sm text-amber-400 mb-0.5 hover:text-violet-400 transition-colors inline-flex items-center gap-1'>
                           #{order.id.slice(0, 8).toUpperCase()}
-                        </div>
+                          <ChevronRight className='w-3 h-3 text-neutral-600' />
+                        </Link>
                         <div className='text-xs text-neutral-500'>
                           {new Date(order.createdAt).toLocaleDateString()}
                         </div>

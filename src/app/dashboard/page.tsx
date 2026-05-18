@@ -26,6 +26,7 @@ import {
     Bell,
     Activity,
     Tags,
+    Tag,
     Settings,
     X,
 } from 'lucide-react'
@@ -403,6 +404,7 @@ export default function DashboardPage() {
                                     { href: '/admin/keys', label: 'Keys', icon: Key, color: 'text-sky-400 bg-sky-500/10 border-sky-500/20' },
                                     { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
                                     { href: '/admin/sellers', label: 'Sellers', icon: Store, color: 'text-pink-400 bg-pink-500/10 border-pink-500/20' },
+                                    { href: '/admin/coupons', label: 'Coupons', icon: Tag, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
                                     { href: '/admin/notifications', label: 'Notifications', icon: Bell, color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
                                     { href: '/admin/fraud', label: 'Fraud', icon: Shield, color: 'text-red-400 bg-red-500/10 border-red-500/20' },
                                     { href: '/admin/health', label: 'Health', icon: Activity, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },

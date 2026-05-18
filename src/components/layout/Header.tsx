@@ -35,7 +35,7 @@ export default function Header() {
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
@@ -51,6 +51,14 @@ export default function Header() {
         { href: '/about', label: 'About' },
         { href: '/contact', label: 'Contact' },
     ]
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+      e.preventDefault()
+      if (searchQuery.trim()) {
+        router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+        setIsMobileMenuOpen(false)
+      }
+    }
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -201,14 +209,16 @@ export default function Header() {
         className='md:hidden bg-slate-900/95 backdrop-blur-xl border-t border-slate-800'
       >
         <div className='px-4 py-5 space-y-5'>
-          <Input
-            type='text'
-            placeholder='Search products...'
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearch}
-            className='w-full bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-500 rounded-xl'
-          />
+          <form onSubmit={handleSearchSubmit}>
+            <Input
+              type='text'
+              placeholder='Search products...'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              className='w-full bg-slate-800/50 border-slate-700 text-slate-200 placeholder:text-slate-500 rounded-xl'
+            />
+          </form>
           <nav className='flex flex-col gap-1'>
             {navLinks.map((link) => (
               <Link
@@ -245,9 +255,17 @@ export default function Header() {
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Bell className='w-4 h-4' />
-                      Notifications
+                      Admin Notifications
                     </Link>
                   )}
+                  <Link
+                    href='/notifications'
+                    className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Bell className='w-4 h-4' />
+                    My Notifications
+                  </Link>
                   <Link
                     href='/dashboard'
                     className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors text-sm font-medium'

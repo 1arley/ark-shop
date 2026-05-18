@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, ChevronDown, LayoutDashboard, Edit3, LogOut,
+  User, ChevronDown, LayoutDashboard, Edit3, LogOut, ShoppingBag, Bell, Key,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -65,6 +65,30 @@ export function UserMenu() {
               >
                 <LayoutDashboard className='w-4 h-4 text-slate-500' />
                 Dashboard
+              </Link>
+              <Link
+                href='/orders'
+                onClick={() => setUserMenuOpen(false)}
+                className='flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors'
+              >
+                <ShoppingBag className='w-4 h-4 text-slate-500' />
+                My Orders
+              </Link>
+              <Link
+                href='/notifications'
+                onClick={() => setUserMenuOpen(false)}
+                className='flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors'
+              >
+                <Bell className='w-4 h-4 text-slate-500' />
+                Notifications
+              </Link>
+              <Link
+                href='/my-keys'
+                onClick={() => setUserMenuOpen(false)}
+                className='flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors'
+              >
+                <Key className='w-4 h-4 text-slate-500' />
+                My Keys
               </Link>
               <Link
                 href='/profile'

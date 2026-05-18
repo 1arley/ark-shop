@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Package, Users, Tags, KeyRound, ShoppingBag,
   ShieldAlert, Activity, Bell, Store, ChevronLeft,
-  PanelLeftClose, PanelLeft, LogOut
+  PanelLeftClose, PanelLeft, LogOut, Ticket
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -19,6 +19,7 @@ const adminNavItems = [
   { href: '/admin/categories', label: 'Categories', icon: Tags },
   { href: '/admin/keys', label: 'Keys', icon: KeyRound },
   { href: '/admin/sellers', label: 'Sellers', icon: Store },
+  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/fraud', label: 'Fraud Logs', icon: ShieldAlert },
   { href: '/admin/health', label: 'System Health', icon: Activity },

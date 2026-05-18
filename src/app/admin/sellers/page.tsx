@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   Store, Search, Loader2, Plus, Trash2, Save, X,
-  Edit3, User, FileText, Percent
+  Edit3, User, FileText, Percent, ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -208,7 +209,10 @@ export default function AdminSellersPage() {
                     </div>
                     <div className='min-w-0'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-sm font-medium text-white'>{seller.companyName}</span>
+                        <Link href={`/admin/sellers/${seller.id}`} className='text-sm font-medium text-white hover:text-violet-400 transition-colors inline-flex items-center gap-1'>
+                          {seller.companyName}
+                          <ChevronRight className='w-3 h-3 text-neutral-600' />
+                        </Link>
                         <span className={`text-xs px-2 py-0.5 rounded-full border ${seller.isActive
                           ? 'border-emerald-500 text-emerald-400'
                           : 'border-neutral-700 text-neutral-500'

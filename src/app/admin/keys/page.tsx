@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import {
   KeyRound, Search, Loader2, Trash2, Save, X,
   Download, Upload, BarChart3, Edit3, Filter,
-  Package
+  Package, Zap, CheckCircle2,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,8 @@ export default function AdminKeysPage() {
   const [importText, setImportText] = useState('')
   const [importing, setImporting] = useState(false)
   const [stats, setStats] = useState<Record<string, { total: number; available: number; reserved: number; delivered: number; archived: number }>>({})
+  const [generatingDemo, setGeneratingDemo] = useState(false)
+  const [demoSuccess, setDemoSuccess] = useState<string | null>(null)
 
   const fetchKeys = async () => {
     try {
@@ -123,6 +125,24 @@ export default function AdminKeysPage() {
     } catch (e: unknown) { alert(e instanceof Error ? e.message : 'Import failed') } finally { setImporting(false) }
   }
 
+  const handleGenerateDemoKeys = async () => {
+    if (!selectedProduct) {
+      alert('Please select a product first')
+      return
+    }
+    setGeneratingDemo(true)
+    try {
+      const res = await apiClient.keysAdmin.generateDemoKeys(selectedProduct, 50)
+      setDemoSuccess(`${res.data.count} demo keys generated!`)
+      await fetchKeys()
+      setTimeout(() => setDemoSuccess(null), 3000)
+    } catch {
+      alert('Failed to generate demo keys')
+    } finally {
+      setGeneratingDemo(false)
+    }
+  }
+
   const exportKeys = () => {
     const csv = keys.map(k => `${k.keyData},${k.status},${k.product?.name || ''}`).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -152,6 +172,11 @@ export default function AdminKeysPage() {
           <p className='text-neutral-400 text-sm mt-1'>{keys.length} keys loaded</p>
         </div>
         <div className='flex gap-2'>
+          <Button onClick={handleGenerateDemoKeys} disabled={generatingDemo || !selectedProduct}
+            className='bg-sky-500/10 text-sky-400 border border-sky-500/20 hover:bg-sky-500/20'>
+            {generatingDemo ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Zap className='w-4 h-4 mr-2' />}
+            Generate Demo Keys
+          </Button>
           <Button onClick={() => setShowBulkImport(!showBulkImport)}
             className='bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'>
             <Upload className='w-4 h-4 mr-2' />Bulk Import
@@ -162,6 +187,13 @@ export default function AdminKeysPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Demo Keys Success Message */}
+      {demoSuccess && (
+        <div className='mb-4 p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg text-sky-400 text-sm flex items-center gap-2'>
+          <CheckCircle2 className='w-4 h-4' />{demoSuccess}
+        </div>
+      )}
 
       {/* Bulk Import Form */}
       <AnimatedForm visible={showBulkImport}>

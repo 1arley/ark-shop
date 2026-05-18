@@ -1,12 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Package, AlertCircle, Search, Inbox, Ban } from 'lucide-react'
+import { Package, AlertCircle, Search, Inbox, Ban, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 interface EmptyStateProps {
-  icon?: 'package' | 'alert' | 'search' | 'inbox' | 'ban'
+  icon?: 'package' | 'alert' | 'search' | 'inbox' | 'ban' | 'tag'
   title: string
   description: string
   actionLabel?: string
@@ -20,6 +20,7 @@ const iconMap = {
   search: Search,
   inbox: Inbox,
   ban: Ban,
+  tag: Tag,
 }
 
 export function EmptyState({
