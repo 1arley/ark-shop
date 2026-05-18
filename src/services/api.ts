@@ -35,6 +35,11 @@ import type {
   SystemHealth,
   UploadResponse,
   DownloadKeysResponse,
+  Coupon,
+  CreateCouponPayload,
+  UpdateCouponPayload,
+  ValidateCouponPayload,
+  ValidateCouponResponse,
 } from '@/types/api'
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
@@ -502,6 +507,12 @@ class ApiClientClass {
 
     updateMe: (data: UpdateProfilePayload) =>
       this.patch<AuthUser>('/user/me', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      this.patch<{ message: string }>('/user/change-password', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    deleteMe: () =>
+      this.delete<void>('/user/me', { requiresAuth: true }),
   }
 
   // --- Products ---
@@ -810,6 +821,35 @@ class ApiClientClass {
   contact = {
     submit: (data: { name: string; email: string; subject: string; message: string }) =>
       this.post<{ message: string }>('/contact', data as unknown as Record<string, unknown>),
+  }
+
+  // --- Coupons ---
+
+  coupons = {
+    // Public: validate coupon
+    validate: (payload: ValidateCouponPayload) =>
+      this.post<ValidateCouponResponse>('/coupons/validate', payload as unknown as Record<string, unknown>),
+
+    // Admin CRUD
+    list: (params?: { page?: number; limit?: number }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.set('page', String(params.page))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+      const query = searchParams.toString()
+      return this.get<PaginatedResponseMeta<Coupon>>(`/coupons${query ? `?${query}` : ''}`, { requiresAuth: true })
+    },
+
+    getById: (id: string) =>
+      this.get<Coupon>(`/coupons/${id}`, { requiresAuth: true }),
+
+    create: (data: CreateCouponPayload) =>
+      this.post<Coupon>('/coupons', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    update: (id: string, data: UpdateCouponPayload) =>
+      this.patch<Coupon>(`/coupons/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+
+    delete: (id: string) =>
+      this.delete<void>(`/coupons/${id}`, { requiresAuth: true }),
   }
 
   // --- Upload ---
