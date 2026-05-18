@@ -142,6 +142,9 @@ export interface Order {
   userId: string
   status: OrderStatus
   total: number
+  subtotal?: number
+  discount?: number
+  couponCode?: string
   items: OrderItem[]
   payment?: Payment | null
   user?: { id: string; name: string; email: string }
@@ -154,6 +157,7 @@ export interface CreateOrderPayload {
     productId: string
     quantity: number
   }[]
+  couponCode?: string
 }
 
 // --- Payments ---
@@ -410,4 +414,103 @@ export interface ApiErrorResponse {
   statusCode: number
   message: string | string[]
   error?: string
+}
+
+// --- Contact ---
+
+export interface ContactPayload {
+  name: string
+  email: string
+  subject: string
+  message: string
+}
+
+// --- Cart (client-side) ---
+
+export interface CartItem {
+  id: string
+  productId: string
+  name: string
+  price: number
+  platform: string
+  image?: string
+  quantity: number
+}
+
+// --- Key Status ---
+
+export type KeyStatus = 'AVAILABLE' | 'RESERVED' | 'DELIVERED' | 'ARCHIVED'
+
+// --- Notification Type ---
+
+export type NotificationType = 'EMAIL' | 'DISCORD' | 'TELEGRAM' | 'WEBHOOK'
+export type NotificationStatus = 'PENDING' | 'SENT' | 'FAILED'
+
+// --- Fraud Risk Level ---
+
+export type FraudRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+// --- Change Password ---
+
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+// --- Coupons ---
+
+export type CouponType = 'PERCENTAGE' | 'FIXED'
+
+export interface Coupon {
+  id: string
+  code: string
+  type: CouponType
+  value: number
+  minPurchase: number | null
+  maxUses: number | null
+  usedCount: number
+  validFrom: string | null
+  validTo: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateCouponPayload {
+  code: string
+  type: CouponType
+  value: number
+  minPurchase?: number
+  maxUses?: number
+  validFrom?: string
+  validTo?: string
+  isActive?: boolean
+}
+
+export interface UpdateCouponPayload {
+  code?: string
+  type?: CouponType
+  value?: number
+  minPurchase?: number
+  maxUses?: number
+  validFrom?: string
+  validTo?: string
+  isActive?: boolean
+}
+
+export interface ValidateCouponPayload {
+  code: string
+  subtotal: number
+}
+
+export interface ValidateCouponResponse {
+  valid: boolean
+  discountAmount: number
+  coupon: {
+    code: string
+    value: number
+    type: CouponType
+  }
+  message: string
 }
