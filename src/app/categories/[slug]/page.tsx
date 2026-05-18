@@ -80,7 +80,7 @@ function CategoryPageContent() {
         const response = await apiClient.products.list({
           page: currentPage,
           limit: 20,
-          categoryId: category.id,
+          categoryId: category!.id,
           isActive: true,
         })
         const data = response.data
