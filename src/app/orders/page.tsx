@@ -256,7 +256,7 @@ export default function OrdersPage() {
             </>
           ) : (
             <EmptyState
-              icon='shoppingBag'
+              icon='package'
               title={statusFilter === 'all' ? 'No orders yet' : `No ${statusFilter.toLowerCase()} orders`}
               description='Start shopping to see your orders here.'
               actionLabel='Browse Products'

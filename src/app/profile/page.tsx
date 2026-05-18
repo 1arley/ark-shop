@@ -66,7 +66,7 @@ export default function ProfilePage() {
     if (user) {
       setName(user.name || '')
       setEmail(user.email)
-      setAvatarUrl((user as Record<string, unknown>).avatarUrl as string || '')
+      setAvatarUrl(user.avatarUrl || '')
     }
   }, [user])
 

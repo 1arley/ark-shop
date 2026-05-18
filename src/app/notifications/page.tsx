@@ -267,7 +267,7 @@ export default function NotificationsPage() {
             </>
           ) : (
             <EmptyState
-              icon='bell'
+              icon='inbox'
               title={filter === 'unread' ? 'No unread notifications' : 'No notifications'}
               description={
                 filter === 'unread'
