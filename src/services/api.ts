@@ -280,6 +280,9 @@ class ApiClientClass {
       }
     }, 15000)
 
+    const controller = new AbortController()
+    const fetchTimeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT)
+
     try {
       // Backend expects refresh token in Authorization Bearer header, not in body
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
@@ -288,7 +291,10 @@ class ApiClientClass {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${refreshToken}`,
         },
+        signal: controller.signal,
       })
+
+      clearTimeout(fetchTimeoutId)
 
       if (!response.ok) {
         this.clearAuth()
@@ -310,6 +316,7 @@ class ApiClientClass {
       return newToken
     } catch (error) {
       if (this.refreshQueueTimeout) clearTimeout(this.refreshQueueTimeout)
+      clearTimeout(fetchTimeoutId)
       this.refreshQueue.forEach(({ reject }) => reject(error as Error))
       this.refreshQueue = []
       this.clearAuth()
@@ -319,6 +326,8 @@ class ApiClientClass {
       this.isRefreshing = false
     }
   }
+
+  private readonly REQUEST_TIMEOUT = 15000 // 15 seconds
 
   private async request<T>(
     endpoint: string,
@@ -341,25 +350,35 @@ class ApiClientClass {
       headers['Authorization'] = `Bearer ${token}`
     }
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT)
+
     try {
       const response = await fetch(url, {
         method,
         headers,
         credentials: 'include',
         body: data ? JSON.stringify(data) : undefined,
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       // Handle 401 — try token refresh once
       if (response.status === 401 && retry && this.getRefreshToken()) {
         try {
           const newToken = await this.tryRefreshToken()
           headers['Authorization'] = `Bearer ${newToken}`
+          const retryController = new AbortController()
+          const retryTimeoutId = setTimeout(() => retryController.abort(), this.REQUEST_TIMEOUT)
           const retryResponse = await fetch(url, {
             method,
             headers,
             credentials: 'include',
             body: data ? JSON.stringify(data) : undefined,
+            signal: retryController.signal,
           })
+          clearTimeout(retryTimeoutId)
           const retryData = await retryResponse.json().catch(() => ({}))
           if (!retryResponse.ok) {
             const error: ApiError = {
@@ -407,6 +426,7 @@ class ApiClientClass {
         status: response.status,
       }
     } catch (error) {
+      clearTimeout(timeoutId)
       // Re-throw if it's already a typed ApiError (has status and code)
       if (error && typeof error === 'object' && 'status' in error && 'code' in error) {
         throw error
@@ -961,27 +981,54 @@ class ApiClientClass {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      credentials: 'include',
-      body: formData,
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT)
 
-    const responseData = await response.json().catch(() => ({}))
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        credentials: 'include',
+        body: formData,
+        signal: controller.signal,
+      })
 
-    if (!response.ok) {
-      const error: ApiError = {
-        name: 'ApiError',
-        message: responseData.message || `HTTP ${response.status}`,
-        status: response.status,
-        code: responseData.code || 'UNKNOWN_ERROR',
-        details: responseData.details,
+      clearTimeout(timeoutId)
+
+      const responseData = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const error: ApiError = {
+          name: 'ApiError',
+          message: responseData.message || `HTTP ${response.status}`,
+          status: response.status,
+          code: responseData.code || 'UNKNOWN_ERROR',
+          details: responseData.details,
+        }
+        throw error
       }
-      throw error
-    }
 
-    return { data: responseData as T, status: response.status }
+      return { data: responseData as T, status: response.status }
+    } catch (error) {
+      clearTimeout(timeoutId)
+
+      if (error && typeof error === 'object' && 'status' in error && 'code' in error) {
+        throw error
+      }
+
+      if (error && typeof error === 'object' && 'status' in error) {
+        throw error
+      }
+
+      const apiError: ApiError = {
+        name: 'NetworkError',
+        message:
+          error instanceof Error ? error.message : 'Network error. Please check your connection.',
+        status: 0,
+        code: 'NETWORK_ERROR',
+      }
+      throw apiError
+    }
   }
 
   // --- Upload ---
