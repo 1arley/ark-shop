@@ -44,18 +44,15 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
       }),
       onRehydrateStorage: () => {
-        // Use zustand's setState instead of mutating the state object directly
         return (state) => {
-          if (state) {
-            useAuthStore.setState({
-              isLoading: false,
-              isAuthenticated: !!state.user,
-            })
-          }
+          useAuthStore.setState({
+            isLoading: false,
+            isAuthenticated: !!state?.user,
+          })
         }
       },
-    }
-  )
+    },
+  ),
 )
 
 export type { AuthUser as User } from '@/types/api'
