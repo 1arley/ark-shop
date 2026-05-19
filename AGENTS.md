@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Digital storefront for games and software licenses. Next.js 15 (App Router) + React 19 + TypeScript, deployed on Vercel. Backend is a separate service on Railway.
+Digital storefront for games and software licenses. Next.js 15 (App Router) + React 19 + TypeScript, deployed on Vercel. Backend is a separate NestJS service on Railway.
 
 ## Commands
 
@@ -13,10 +13,13 @@ npm run start        # Preview production build
 npm run lint         # ESLint check
 npm run test         # Vitest watch mode
 npm run test:run     # Vitest single run
+npm run test:coverage # Vitest with coverage
 npm run clean-dev    # rm -rf .next && npm run dev
+npm run clean-build  # rm -rf .next && npm run build
+npm run clean-install # rm -rf node_modules && npm ci
 ```
 
-**Required env vars** (`.env.local`): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. Without these, `npm run build` will fail in production mode. Dev mode warns but continues.
+**Required env vars** (`.env.local`): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. Without these, `npm run build` fails in production. Dev mode warns but continues. Node `>=18.18.0` required.
 
 ## Architecture
 
@@ -26,12 +29,15 @@ Every page under `src/app/` is a client component. There are no Server Component
 
 ### API Client (`src/services/api.ts`)
 
-Singleton `apiClient` class with:
+Singleton `apiClient` class (`ApiClientClass`):
 
 - Bearer token auth (stored in localStorage)
 - Automatic token refresh (30-min lifetime, refreshes 5 min before expiry)
-- Namespaced endpoints: `apiClient.admin.*`, `apiClient.products.*`, `apiClient.paymentsAdmin.*`, `apiClient.categories.*`, etc.
+- Auto-logout after 10 min of inactivity (unless `rememberMe` is set)
+- Namespaced endpoints: `apiClient.admin.*`, `apiClient.products.*`, `apiClient.paymentsAdmin.*`, etc.
 - Returns `{ data: T, status: number }` wrapped responses
+- Uses `as unknown as Record<string, unknown>` casts for typed payloads — this is intentional, do not "fix"
+- 401 responses trigger automatic token refresh + single retry
 
 ### State Management
 
@@ -41,6 +47,8 @@ Two Zustand stores with localStorage persistence:
 - **`src/stores/cart-store.ts`** — `useCartStore`: items, addItem, removeItem, etc. Storage key: `ark-shop-cart`.
 
 Use selectors to avoid unnecessary re-renders: `useAuthStore((s) => s.isAuthenticated)` not `useAuthStore()`.
+
+**Zustand `onRehydrateStorage`**: Always set `isLoading: false` in the callback, even when `state` is null (no persisted data). The initial state is `isLoading: true` to cover hydration delay — if the callback skips setting it when `state` is null, the store stays loading forever.
 
 ### Directory Structure
 
@@ -54,8 +62,8 @@ src/
     dashboard/   # User dashboard
     search/      # Search with filters
   components/    # UI components (shadcn/ui in components/ui/)
-  hooks/         # Custom React hooks (use-upload, use-cart, etc.)
-  lib/           # Utilities (env.ts, utils.ts)
+  hooks/         # Custom React hooks (use-auth, use-upload, use-cart, etc.)
+  lib/           # env.ts (env validation), utils.ts (cn, formatPrice, extractApiError), validations.ts (Zod schemas)
   middleware.ts  # Edge middleware: admin route defense-in-depth + security headers
   services/      # api.ts (ApiClientClass singleton)
   stores/        # Zustand stores (auth, cart)
@@ -81,6 +89,11 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build
 - When typing form state that maps to an API payload, use the payload type explicitly (e.g., `useState<AdminUpdateUserPayload>(...)`) — TypeScript widens string literals to `string` otherwise.
 - HTML `<select>` `e.target.value` is always `string`; cast to the expected union type when assigning to typed state.
 
+### Validation
+
+- Zod v4 used in `src/lib/validations.ts` (login, register, checkout, contact forms)
+- `extractApiError(err, fallback)` in `src/lib/utils.ts` — always use this for error message extraction from API calls
+
 ### Auth & Route Protection
 
 - Frontend/backend are on different domains (Vercel/Railway), so httpOnly cookies from the backend are not visible to middleware.
@@ -92,7 +105,7 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build
 
 - Tailwind CSS v3 with shadcn/ui components
 - Color palette: neutral backgrounds, violet accents, emerald for success states
-- `src/lib/utils.ts` has `cn()` (clsx + tailwind-merge) and `formatPrice()`
+- `src/lib/utils.ts` has `cn()` (clsx + tailwind-merge) and `formatPrice()` (pt-BR locale, e.g., `29,90`)
 
 ### Deployment
 
@@ -114,3 +127,4 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build
 - **framer-motion**: Imported statically across many pages. Consider `next/dynamic` for pages where animations are not critical to initial paint.
 - **Missing deps in hooks**: Several `useEffect`/`useCallback` hooks have missing dependency warnings. These are intentional in some cases but should be reviewed when touching those files.
 - **localStorage keys**: `ark-shop-auth` (auth store), `ark-shop-cart` (cart store), `auth_token`/`auth_refresh_token`/`auth_remember_me` (api client). Don't collide with these.
+- **env.ts browser check**: `env.ts` skips validation in the browser because `process.env` is `{}` at runtime in client bundles. Validation only runs on server (build time / SSR).
