@@ -1,0 +1,116 @@
+# AGENTS.md — ark-games-shop
+
+## Project Overview
+
+Digital storefront for games and software licenses. Next.js 15 (App Router) + React 19 + TypeScript, deployed on Vercel. Backend is a separate service on Railway.
+
+## Commands
+
+```bash
+npm run dev          # Start dev server (localhost:3000)
+npm run build        # Production build (fails on type errors)
+npm run start        # Preview production build
+npm run lint         # ESLint check
+npm run test         # Vitest watch mode
+npm run test:run     # Vitest single run
+npm run clean-dev    # rm -rf .next && npm run dev
+```
+
+**Required env vars** (`.env.local`): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. Without these, `npm run build` will fail in production mode. Dev mode warns but continues.
+
+## Architecture
+
+### All pages are `'use client'`
+
+Every page under `src/app/` is a client component. There are no Server Components doing data fetching. All data is fetched client-side via `apiClient`. When adding new pages, follow this pattern — do not convert to Server Components unless explicitly requested.
+
+### API Client (`src/services/api.ts`)
+
+Singleton `apiClient` class with:
+
+- Bearer token auth (stored in localStorage)
+- Automatic token refresh (30-min lifetime, refreshes 5 min before expiry)
+- Namespaced endpoints: `apiClient.admin.*`, `apiClient.products.*`, `apiClient.paymentsAdmin.*`, `apiClient.categories.*`, etc.
+- Returns `{ data: T, status: number }` wrapped responses
+
+### State Management
+
+Two Zustand stores with localStorage persistence:
+
+- **`src/stores/auth-store.ts`** — `useAuthStore`: user, isLoading, isAuthenticated. Storage key: `ark-shop-auth`.
+- **`src/stores/cart-store.ts`** — `useCartStore`: items, addItem, removeItem, etc. Storage key: `ark-shop-cart`.
+
+Use selectors to avoid unnecessary re-renders: `useAuthStore((s) => s.isAuthenticated)` not `useAuthStore()`.
+
+### Directory Structure
+
+```
+src/
+  app/           # Next.js App Router pages (~39 routes)
+    admin/       # Admin panel (users, products, orders, sellers, coupons, keys, etc.)
+    products/    # Product listing + [slug] detail
+    cart/        # Shopping cart
+    checkout/    # Checkout flow
+    dashboard/   # User dashboard
+    search/      # Search with filters
+  components/    # UI components (shadcn/ui in components/ui/)
+  hooks/         # Custom React hooks (use-upload, use-cart, etc.)
+  lib/           # Utilities (env.ts, utils.ts)
+  middleware.ts  # Edge middleware: admin route defense-in-depth + security headers
+  services/      # api.ts (ApiClientClass singleton)
+  stores/        # Zustand stores (auth, cart)
+  tests/         # Test setup
+  types/         # api.ts (all API types/interfaces)
+```
+
+## Conventions
+
+### Commit Messages
+
+Conventional Commits enforced by Husky hook: `<type>(<scope>)?: <description>`
+Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `revert`.
+
+### Pre-commit
+
+`lint-staged` runs `eslint --fix` and `prettier --write` on `*.{ts,tsx}` and `prettier --write` on `*.{css,json,md}`.
+
+### Type Safety
+
+- `strict: true` in tsconfig
+- All API types live in `src/types/api.ts`
+- When typing form state that maps to an API payload, use the payload type explicitly (e.g., `useState<AdminUpdateUserPayload>(...)`) — TypeScript widens string literals to `string` otherwise.
+- HTML `<select>` `e.target.value` is always `string`; cast to the expected union type when assigning to typed state.
+
+### Auth & Route Protection
+
+- Frontend/backend are on different domains (Vercel/Railway), so httpOnly cookies from the backend are not visible to middleware.
+- Admin routes are protected client-side via `useAuth()` in `src/app/admin/layout.tsx`.
+- `src/middleware.ts` provides defense-in-depth cookie check for `/admin/*` paths.
+- When working on admin pages, assume the user is already authenticated; the layout handles redirects.
+
+### Styling
+
+- Tailwind CSS v3 with shadcn/ui components
+- Color palette: neutral backgrounds, violet accents, emerald for success states
+- `src/lib/utils.ts` has `cn()` (clsx + tailwind-merge) and `formatPrice()`
+
+### Deployment
+
+- Deployed on Vercel with build cache
+- `output: 'standalone'` in next.config.ts
+- Security headers configured in next.config.ts (CSP, HSTS, X-Frame-Options, etc.)
+- `images.remotePatterns` allows all HTTPS hosts (backend CDN)
+
+## Testing
+
+- Vitest with jsdom environment, globals enabled
+- Test files: `src/**/*.test.{ts,tsx}`
+- Setup file: `src/tests/setup.ts`
+- `@testing-library/react` available
+
+## Gotchas
+
+- **Barrel imports**: `src/components/admin/products/index.ts` re-exports components. Import directly from source files when possible to avoid pulling unused code.
+- **framer-motion**: Imported statically across many pages. Consider `next/dynamic` for pages where animations are not critical to initial paint.
+- **Missing deps in hooks**: Several `useEffect`/`useCallback` hooks have missing dependency warnings. These are intentional in some cases but should be reviewed when touching those files.
+- **localStorage keys**: `ark-shop-auth` (auth store), `ark-shop-cart` (cart store), `auth_token`/`auth_refresh_token`/`auth_remember_me` (api client). Don't collide with these.

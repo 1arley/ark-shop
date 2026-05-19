@@ -26,7 +26,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { apiClient } from '@/services/api'
 import { formatPrice } from '@/lib/utils'
-import type { AdminUser, Order, Payment } from '@/types/api'
+import type { AdminUser, AdminUpdateUserPayload, Order, Payment } from '@/types/api'
 
 function UserDetailContent() {
   const router = useRouter()
@@ -38,7 +38,11 @@ function UserDetailContent() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'USER' })
+  const [editForm, setEditForm] = useState<AdminUpdateUserPayload>({
+    name: '',
+    email: '',
+    role: 'USER',
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -60,9 +64,7 @@ function UserDetailContent() {
         // Load user's orders
         try {
           const ordersRes = await apiClient.admin.listOrders({ limit: 50 })
-          const userOrders = (ordersRes.data.data || []).filter(
-            (o: Order) => o.userId === userId
-          )
+          const userOrders = (ordersRes.data.data || []).filter((o: Order) => o.userId === userId)
           setOrders(userOrders)
         } catch {
           // No orders
@@ -113,8 +115,8 @@ function UserDetailContent() {
 
   if (isLoading) {
     return (
-      <div className='flex justify-center py-16'>
-        <Loader2 className='w-8 h-8 text-violet-400 animate-spin' />
+      <div className="flex justify-center py-16">
+        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
       </div>
     )
   }
@@ -122,138 +124,172 @@ function UserDetailContent() {
   if (!user) {
     return (
       <EmptyState
-        icon='alert'
-        title='User not found'
-        description='The user you are looking for does not exist.'
-        actionLabel='Back to Users'
-        actionHref='/admin/users'
+        icon="alert"
+        title="User not found"
+        description="The user you are looking for does not exist."
+        actionLabel="Back to Users"
+        actionHref="/admin/users"
       />
     )
   }
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='ghost' onClick={() => router.back()} className='text-neutral-400 hover:text-white'>
-            <ArrowLeft className='w-4 h-4 mr-2' />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="text-neutral-400 hover:text-white"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex items-center justify-center'>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex items-center justify-center">
               {user.avatarUrl ? (
-                <Image src={user.avatarUrl} alt='' width={48} height={48} className='object-cover' unoptimized />
+                <Image
+                  src={user.avatarUrl}
+                  alt=""
+                  width={48}
+                  height={48}
+                  className="object-cover"
+                  unoptimized
+                />
               ) : (
-                <User className='w-6 h-6 text-neutral-500' />
+                <User className="w-6 h-6 text-neutral-500" />
               )}
             </div>
             <div>
-              <h2 className='text-xl font-semibold text-white'>{user.name}</h2>
-              <p className='text-sm text-neutral-400'>{user.email}</p>
+              <h2 className="text-xl font-semibold text-white">{user.name}</h2>
+              <p className="text-sm text-neutral-400">{user.email}</p>
             </div>
           </div>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className="flex items-center gap-2">
           {!editing ? (
-            <Button variant='outline' size='sm' onClick={() => setEditing(true)} className='border-neutral-700 text-neutral-300'>
-              <Edit2 className='w-4 h-4 mr-2' />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(true)}
+              className="border-neutral-700 text-neutral-300"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
               Edit
             </Button>
           ) : (
-            <Button size='sm' onClick={handleSave} disabled={saving} className='bg-violet-600 hover:bg-violet-500'>
-              {saving ? <Loader2 className='w-4 h-4 animate-spin mr-2' /> : <Save className='w-4 h-4 mr-2' />}
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-violet-600 hover:bg-violet-500"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
               Save
             </Button>
           )}
           <Button
-            variant='outline'
-            size='sm'
+            variant="outline"
+            size="sm"
             onClick={() => setShowDeleteDialog(true)}
-            className='border-red-500/30 text-red-400 hover:bg-red-500/10'
+            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
           >
-            <Trash2 className='w-4 h-4' />
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2'>
-          <AlertCircle className='w-4 h-4' />{error}
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {error}
         </div>
       )}
       {success && (
-        <div className='p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm flex items-center gap-2'>
-          <CheckCircle2 className='w-4 h-4' />{success}
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4" />
+          {success}
         </div>
       )}
 
       {/* User Info */}
-      <div className='grid sm:grid-cols-2 gap-4'>
-        <Card className='bg-neutral-900/50 border-neutral-800'>
-          <CardContent className='p-5'>
-            <h3 className='text-sm font-semibold text-white mb-4'>User Information</h3>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Card className="bg-neutral-900/50 border-neutral-800">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-white mb-4">User Information</h3>
             {editing ? (
-              <div className='space-y-3'>
+              <div className="space-y-3">
                 <div>
-                  <label className='text-xs text-neutral-500 mb-1 block'>Name</label>
+                  <label className="text-xs text-neutral-500 mb-1 block">Name</label>
                   <input
-                    type='text'
+                    type="text"
                     value={editForm.name}
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm'
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
                   />
                 </div>
                 <div>
-                  <label className='text-xs text-neutral-500 mb-1 block'>Email</label>
+                  <label className="text-xs text-neutral-500 mb-1 block">Email</label>
                   <input
-                    type='email'
+                    type="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm'
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
                   />
                 </div>
                 <div>
-                  <label className='text-xs text-neutral-500 mb-1 block'>Role</label>
+                  <label className="text-xs text-neutral-500 mb-1 block">Role</label>
                   <select
                     value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className='w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm'
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        role: e.target.value as 'USER' | 'ADMIN' | 'SUPERADMIN',
+                      })
+                    }
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
                   >
-                    <option value='USER'>User</option>
-                    <option value='ADMIN'>Admin</option>
-                    <option value='SUPERADMIN'>Super Admin</option>
+                    <option value="USER">User</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="SUPERADMIN">Super Admin</option>
                   </select>
                 </div>
               </div>
             ) : (
-              <div className='space-y-4'>
-                <div className='flex items-center gap-3'>
-                  <User className='w-4 h-4 text-neutral-500' />
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <User className="w-4 h-4 text-neutral-500" />
                   <div>
-                    <span className='text-xs text-neutral-500'>Name</span>
-                    <p className='text-sm text-white'>{user.name}</p>
+                    <span className="text-xs text-neutral-500">Name</span>
+                    <p className="text-sm text-white">{user.name}</p>
                   </div>
                 </div>
-                <div className='flex items-center gap-3'>
-                  <Mail className='w-4 h-4 text-neutral-500' />
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-neutral-500" />
                   <div>
-                    <span className='text-xs text-neutral-500'>Email</span>
-                    <p className='text-sm text-white'>{user.email}</p>
+                    <span className="text-xs text-neutral-500">Email</span>
+                    <p className="text-sm text-white">{user.email}</p>
                   </div>
                 </div>
-                <div className='flex items-center gap-3'>
-                  <Tag className='w-4 h-4 text-neutral-500' />
+                <div className="flex items-center gap-3">
+                  <Tag className="w-4 h-4 text-neutral-500" />
                   <div>
-                    <span className='text-xs text-neutral-500'>Role</span>
-                    <p className='text-sm text-white'>{user.role}</p>
+                    <span className="text-xs text-neutral-500">Role</span>
+                    <p className="text-sm text-white">{user.role}</p>
                   </div>
                 </div>
-                <div className='flex items-center gap-3'>
-                  <Calendar className='w-4 h-4 text-neutral-500' />
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-4 h-4 text-neutral-500" />
                   <div>
-                    <span className='text-xs text-neutral-500'>Member since</span>
-                    <p className='text-sm text-white'>{new Date(user.createdAt).toLocaleDateString()}</p>
+                    <span className="text-xs text-neutral-500">Member since</span>
+                    <p className="text-sm text-white">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -261,19 +297,21 @@ function UserDetailContent() {
           </CardContent>
         </Card>
 
-        <Card className='bg-neutral-900/50 border-neutral-800'>
-          <CardContent className='p-5'>
-            <h3 className='text-sm font-semibold text-white mb-4'>Activity</h3>
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='text-center p-3 bg-neutral-800/50 rounded-lg'>
-                <ShoppingBag className='w-6 h-6 text-violet-400 mx-auto mb-2' />
-                <div className='text-xl font-bold text-white'>{user._count?.orders || orders.length}</div>
-                <div className='text-xs text-neutral-500'>Orders</div>
+        <Card className="bg-neutral-900/50 border-neutral-800">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-white mb-4">Activity</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-neutral-800/50 rounded-lg">
+                <ShoppingBag className="w-6 h-6 text-violet-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">
+                  {user._count?.orders || orders.length}
+                </div>
+                <div className="text-xs text-neutral-500">Orders</div>
               </div>
-              <div className='text-center p-3 bg-neutral-800/50 rounded-lg'>
-                <CreditCard className='w-6 h-6 text-emerald-400 mx-auto mb-2' />
-                <div className='text-xl font-bold text-white'>{user._count?.payments || 0}</div>
-                <div className='text-xs text-neutral-500'>Payments</div>
+              <div className="text-center p-3 bg-neutral-800/50 rounded-lg">
+                <CreditCard className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+                <div className="text-xl font-bold text-white">{user._count?.payments || 0}</div>
+                <div className="text-xs text-neutral-500">Payments</div>
               </div>
             </div>
           </CardContent>
@@ -282,18 +320,20 @@ function UserDetailContent() {
 
       {/* Orders */}
       {orders.length > 0 && (
-        <Card className='bg-neutral-900/50 border-neutral-800'>
-          <CardContent className='p-5'>
-            <h3 className='text-sm font-semibold text-white mb-4'>Recent Orders</h3>
-            <div className='space-y-3'>
+        <Card className="bg-neutral-900/50 border-neutral-800">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-white mb-4">Recent Orders</h3>
+            <div className="space-y-3">
               {orders.slice(0, 10).map((order) => (
                 <Link key={order.id} href={`/admin/orders/${order.id}`}>
-                  <div className='flex items-center justify-between p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800 transition-colors'>
+                  <div className="flex items-center justify-between p-3 bg-neutral-800/50 rounded-lg hover:bg-neutral-800 transition-colors">
                     <div>
-                      <span className='text-xs text-violet-400 font-mono'>#{order.id.slice(0, 8).toUpperCase()}</span>
-                      <p className='text-sm text-white mt-1'>R$ {formatPrice(order.total)}</p>
+                      <span className="text-xs text-violet-400 font-mono">
+                        #{order.id.slice(0, 8).toUpperCase()}
+                      </span>
+                      <p className="text-sm text-white mt-1">R$ {formatPrice(order.total)}</p>
                     </div>
-                    <StatusBadge status={order.status} variant='order' />
+                    <StatusBadge status={order.status} variant="order" />
                   </div>
                 </Link>
               ))}
@@ -304,21 +344,28 @@ function UserDetailContent() {
 
       {/* Payments */}
       {payments.length > 0 && (
-        <Card className='bg-neutral-900/50 border-neutral-800'>
-          <CardContent className='p-5'>
-            <h3 className='text-sm font-semibold text-white mb-4 flex items-center gap-2'>
-              <CreditCard className='w-4 h-4 text-emerald-400' />
+        <Card className="bg-neutral-900/50 border-neutral-800">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-emerald-400" />
               Payment History
             </h3>
-            <div className='space-y-3'>
+            <div className="space-y-3">
               {payments.slice(0, 10).map((payment) => (
-                <div key={payment.id} className='flex items-center justify-between p-3 bg-neutral-800/50 rounded-lg'>
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-3 bg-neutral-800/50 rounded-lg"
+                >
                   <div>
-                    <span className='text-xs text-neutral-500 font-mono'>#{payment.id.slice(0, 8).toUpperCase()}</span>
-                    <p className='text-sm text-white mt-1'>R$ {formatPrice(payment.amount)}</p>
-                    <p className='text-xs text-neutral-500'>{payment.provider} · {payment.method}</p>
+                    <span className="text-xs text-neutral-500 font-mono">
+                      #{payment.id.slice(0, 8).toUpperCase()}
+                    </span>
+                    <p className="text-sm text-white mt-1">R$ {formatPrice(payment.amount)}</p>
+                    <p className="text-xs text-neutral-500">
+                      {payment.provider} · {payment.method}
+                    </p>
                   </div>
-                  <StatusBadge status={payment.status} variant='payment' />
+                  <StatusBadge status={payment.status} variant="payment" />
                 </div>
               ))}
             </div>
@@ -329,11 +376,11 @@ function UserDetailContent() {
       {/* Delete Dialog */}
       <ConfirmDialog
         open={showDeleteDialog}
-        title='Delete User'
+        title="Delete User"
         description={`Are you sure you want to delete ${user.name}? This action cannot be undone.`}
-        confirmLabel='Delete User'
-        cancelLabel='Cancel'
-        variant='danger'
+        confirmLabel="Delete User"
+        cancelLabel="Cancel"
+        variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteDialog(false)}
         loading={deleting}
@@ -344,11 +391,13 @@ function UserDetailContent() {
 
 export default function UserDetailPage() {
   return (
-    <Suspense fallback={
-      <div className='flex justify-center py-16'>
-        <Loader2 className='w-8 h-8 text-violet-400 animate-spin' />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+        </div>
+      }
+    >
       <UserDetailContent />
     </Suspense>
   )
