@@ -30,9 +30,14 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false })
-        // Delegate token cleanup to apiClient to avoid cross-module localStorage coupling
+        // Clean up all auth-related localStorage keys.
+        // NOTE: useAuth() also calls apiClient.clearAuth() which handles token cleanup.
+        // This direct cleanup protects against calling logout() from outside useAuth().
         if (typeof window !== 'undefined') {
           localStorage.removeItem(storageKey)
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('auth_refresh_token')
+          localStorage.removeItem('auth_remember_me')
         }
       },
     }),

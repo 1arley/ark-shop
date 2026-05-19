@@ -73,6 +73,9 @@ class ApiClientClass {
   private lastActivity = Date.now()
   private tokenExpiryTime: number | null = null
 
+  // Activity tracking — stored to remove listeners on cleanup
+  private activityBoundListeners: Array<{ event: string; handler: () => void }> = []
+
   // Timings (in ms)
   private readonly ACCESS_TOKEN_LIFETIME = 30 * 60 * 1000 // 30 minutes
   private readonly REFRESH_BEFORE_EXPIRY = 5 * 60 * 1000 // 5 minutes before
@@ -187,6 +190,13 @@ class ApiClientClass {
       clearTimeout(this.inactivityTimer)
       this.inactivityTimer = null
     }
+    // Remove activity event listeners to prevent memory leaks on re-login
+    if (typeof window !== 'undefined') {
+      this.activityBoundListeners.forEach(({ event, handler }) => {
+        window.removeEventListener(event, handler)
+      })
+      this.activityBoundListeners = []
+    }
   }
 
   private setupActivityTracking() {
@@ -203,8 +213,9 @@ class ApiClientClass {
       }
     }
 
-    events.forEach(event => {
+    events.forEach((event) => {
       window.addEventListener(event, handleActivity, { passive: true })
+      this.activityBoundListeners.push({ event, handler: handleActivity })
     })
   }
 
@@ -275,7 +286,7 @@ class ApiClientClass {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
+          Authorization: `Bearer ${refreshToken}`,
         },
       })
 
@@ -316,7 +327,7 @@ class ApiClientClass {
       data?: Record<string, unknown>
       requiresAuth?: boolean
       retry?: boolean
-    } = {}
+    } = {},
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', data, retry = true } = options
     const url = `${this.baseURL}${endpoint}`
@@ -397,12 +408,7 @@ class ApiClientClass {
       }
     } catch (error) {
       // Re-throw if it's already a typed ApiError (has status and code)
-      if (
-        error &&
-        typeof error === 'object' &&
-        'status' in error &&
-        'code' in error
-      ) {
+      if (error && typeof error === 'object' && 'status' in error && 'code' in error) {
         throw error
       }
 
@@ -432,7 +438,7 @@ class ApiClientClass {
   async post<T>(
     endpoint: string,
     data?: Record<string, unknown>,
-    options?: { requiresAuth?: boolean }
+    options?: { requiresAuth?: boolean },
   ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'POST', data })
   }
@@ -440,7 +446,7 @@ class ApiClientClass {
   async put<T>(
     endpoint: string,
     data?: Record<string, unknown>,
-    options?: { requiresAuth?: boolean }
+    options?: { requiresAuth?: boolean },
   ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PUT', data })
   }
@@ -452,7 +458,7 @@ class ApiClientClass {
   async patch<T>(
     endpoint: string,
     data?: Record<string, unknown>,
-    options?: { requiresAuth?: boolean }
+    options?: { requiresAuth?: boolean },
   ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PATCH', data })
   }
@@ -470,8 +476,7 @@ class ApiClientClass {
     register: (payload: RegisterPayload) =>
       this.post<RegisterResponse>('/auth/register', payload as unknown as Record<string, unknown>),
 
-    me: () =>
-      this.get<AuthUser>('/auth/me', { requiresAuth: true }),
+    me: () => this.get<AuthUser>('/auth/me', { requiresAuth: true }),
 
     refresh: async (refreshToken: string) => {
       // Reuse the internal refresh queue to avoid duplicate logic
@@ -487,17 +492,22 @@ class ApiClientClass {
       }
     },
 
-    logout: () =>
-      this.post<{ message: string }>('/auth/logout', undefined, { requiresAuth: true }),
+    logout: () => this.post<{ message: string }>('/auth/logout', undefined, { requiresAuth: true }),
 
     forgotPassword: (email: string) =>
       this.post<{ message: string }>('/auth/forgot-password', { email }),
 
     resetPassword: (payload: ResetPasswordPayload) =>
-      this.post<{ message: string }>('/auth/reset-password', payload as unknown as Record<string, unknown>),
+      this.post<{ message: string }>(
+        '/auth/reset-password',
+        payload as unknown as Record<string, unknown>,
+      ),
 
     verifyEmail: (payload: VerifyEmailPayload) =>
-      this.post<VerifyEmailResponse>('/auth/verify-email', payload as unknown as Record<string, unknown>),
+      this.post<VerifyEmailResponse>(
+        '/auth/verify-email',
+        payload as unknown as Record<string, unknown>,
+      ),
 
     resendVerification: (email: string) =>
       this.post<{ message: string }>('/auth/resend-verification', { email }),
@@ -506,17 +516,21 @@ class ApiClientClass {
   // --- User Profile ---
 
   user = {
-    getMe: () =>
-      this.get<AuthUser>('/user/me', { requiresAuth: true }),
+    getMe: () => this.get<AuthUser>('/user/me', { requiresAuth: true }),
 
     updateMe: (data: UpdateProfilePayload) =>
-      this.patch<AuthUser>('/user/me', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<AuthUser>('/user/me', data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     changePassword: (data: { currentPassword: string; newPassword: string }) =>
-      this.patch<{ message: string }>('/user/change-password', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<{ message: string }>(
+        '/user/change-password',
+        data as unknown as Record<string, unknown>,
+        { requiresAuth: true },
+      ),
 
-    deleteMe: () =>
-      this.delete<void>('/user/me', { requiresAuth: true }),
+    deleteMe: () => this.delete<void>('/user/me', { requiresAuth: true }),
   }
 
   // --- Products ---
@@ -530,28 +544,26 @@ class ApiClientClass {
       if (params?.isActive !== undefined) searchParams.set('isActive', String(params.isActive))
       if (params?.categoryId) searchParams.set('categoryId', params.categoryId)
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<Product> | Product[]>(`/products${query ? `?${query}` : ''}`)
+      return this.get<PaginatedResponse<Product> | Product[]>(
+        `/products${query ? `?${query}` : ''}`,
+      )
     },
 
-    getById: (id: string) =>
-      this.get<Product>(`/products/${id}`),
+    getById: (id: string) => this.get<Product>(`/products/${id}`),
   }
 
   // --- Categories ---
 
   categories = {
-    list: () =>
-      this.get<Category[]>('/categories'),
+    list: () => this.get<Category[]>('/categories'),
 
-    getRoot: () =>
-      this.get<Category[]>('/categories/root'),
+    getRoot: () => this.get<Category[]>('/categories/root'),
   }
 
   // --- Cart ---
 
   cart = {
-    get: () =>
-      this.get<ApiCart>('/cart', { requiresAuth: true }),
+    get: () => this.get<ApiCart>('/cart', { requiresAuth: true }),
 
     addItem: (productId: string, quantity: number) =>
       this.post<ApiCart>('/cart/items', { productId, quantity }, { requiresAuth: true }),
@@ -562,29 +574,30 @@ class ApiClientClass {
     removeItem: (productId: string) =>
       this.delete<ApiCart>(`/cart/items/${productId}`, { requiresAuth: true }),
 
-    clear: () =>
-      this.delete<void>('/cart', { requiresAuth: true }),
+    clear: () => this.delete<void>('/cart', { requiresAuth: true }),
 
-    getCount: () =>
-      this.get<{ count: number }>('/cart/count', { requiresAuth: true }),
+    getCount: () => this.get<{ count: number }>('/cart/count', { requiresAuth: true }),
   }
 
   // --- Orders ---
 
   orders = {
     create: (payload: CreateOrderPayload) =>
-      this.post<Order>('/orders', payload as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Order>('/orders', payload as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     list: (params?: { page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<Order> | Order[]>(`/orders${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<Order> | Order[]>(`/orders${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
-    getById: (id: string) =>
-      this.get<Order>(`/orders/${id}`, { requiresAuth: true }),
+    getById: (id: string) => this.get<Order>(`/orders/${id}`, { requiresAuth: true }),
 
     cancel: (id: string) =>
       this.post<Order>(`/orders/${id}/cancel`, undefined, { requiresAuth: true }),
@@ -597,10 +610,11 @@ class ApiClientClass {
 
   payments = {
     create: (orderId: string, payload: CreatePaymentPayload) =>
-      this.post<Payment>(`/payments/${orderId}`, payload as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Payment>(`/payments/${orderId}`, payload as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    getById: (id: string) =>
-      this.get<Payment>(`/payments/${id}`, { requiresAuth: true }),
+    getById: (id: string) => this.get<Payment>(`/payments/${id}`, { requiresAuth: true }),
 
     getByOrder: (orderId: string) =>
       this.get<Payment>(`/payments/order/${orderId}`, { requiresAuth: true }),
@@ -611,8 +625,7 @@ class ApiClientClass {
   // ============================================================
 
   admin = {
-    dashboard: () =>
-      this.get<DashboardStats>('/admin/dashboard', { requiresAuth: true }),
+    dashboard: () => this.get<DashboardStats>('/admin/dashboard', { requiresAuth: true }),
 
     // --- Products ---
     listProducts: (params?: { page?: number; limit?: number; search?: string }) => {
@@ -621,14 +634,38 @@ class ApiClientClass {
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.search) searchParams.set('search', params.search)
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<Product>>(`/admin/products${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<Product>>(`/admin/products${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
-    createProduct: (data: { name: string; description?: string; price: number; stock: number; categoryId?: string; imageUrl?: string }) =>
-      this.post<Product>('/admin/products', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+    createProduct: (data: {
+      name: string
+      description?: string
+      price: number
+      stock: number
+      categoryId?: string
+      imageUrl?: string
+    }) =>
+      this.post<Product>('/admin/products', data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    updateProduct: (id: string, data: { name?: string; description?: string; price?: number; stock?: number; categoryId?: string; imageUrl?: string; isActive?: boolean }) =>
-      this.patch<Product>(`/admin/products/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+    updateProduct: (
+      id: string,
+      data: {
+        name?: string
+        description?: string
+        price?: number
+        stock?: number
+        categoryId?: string
+        imageUrl?: string
+        isActive?: boolean
+      },
+    ) =>
+      this.patch<Product>(`/admin/products/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     deleteProduct: (id: string) =>
       this.delete<void>(`/admin/products/${id}`, { requiresAuth: true }),
@@ -640,7 +677,9 @@ class ApiClientClass {
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.status) searchParams.set('status', params.status)
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<Order>>(`/admin/orders${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<Order>>(`/admin/orders${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
     updateOrderStatus: (id: string, status: string) =>
@@ -648,7 +687,11 @@ class ApiClientClass {
 
     // --- Keys ---
     addKeys: (productId: string, keys: string[]) =>
-      this.post<{ count: number }>(`/admin/products/${productId}/keys`, { keys }, { requiresAuth: true }),
+      this.post<{ count: number }>(
+        `/admin/products/${productId}/keys`,
+        { keys },
+        { requiresAuth: true },
+      ),
 
     listKeys: (params?: { page?: number; limit?: number; productId?: string }) => {
       const searchParams = new URLSearchParams()
@@ -656,11 +699,17 @@ class ApiClientClass {
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.productId) searchParams.set('productId', params.productId)
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<GameKey>>(`/admin/keys${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<GameKey>>(`/admin/keys${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
     bulkImportKeys: (productId: string, keysText: string, isCsv?: boolean) =>
-      this.post<BatchImportResult>('/admin/keys/import', { productId, keysText, isCsv } as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<BatchImportResult>(
+        '/admin/keys/import',
+        { productId, keysText, isCsv } as unknown as Record<string, unknown>,
+        { requiresAuth: true },
+      ),
 
     // --- Users ---
     listUsers: (params?: { page?: number; limit?: number }) => {
@@ -668,17 +717,19 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponseMeta<AdminUser>>(`/admin/users${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponseMeta<AdminUser>>(`/admin/users${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
-    getUser: (id: string) =>
-      this.get<AdminUser>(`/admin/users/${id}`, { requiresAuth: true }),
+    getUser: (id: string) => this.get<AdminUser>(`/admin/users/${id}`, { requiresAuth: true }),
 
     updateUser: (id: string, data: AdminUpdateUserPayload) =>
-      this.patch<AdminUser>(`/admin/users/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<AdminUser>(`/admin/users/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    deleteUser: (id: string) =>
-      this.delete<void>(`/admin/users/${id}`, { requiresAuth: true }),
+    deleteUser: (id: string) => this.delete<void>(`/admin/users/${id}`, { requiresAuth: true }),
 
     // --- Fraud Logs ---
     getFraudLogs: (params?: { page?: number; limit?: number }) => {
@@ -686,35 +737,47 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponseMeta<FraudLog>>(`/admin/fraud-logs${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponseMeta<FraudLog>>(
+        `/admin/fraud-logs${query ? `?${query}` : ''}`,
+        { requiresAuth: true },
+      )
     },
 
     // --- System Health ---
-    getSystemHealth: () =>
-      this.get<SystemHealth>('/admin/health', { requiresAuth: true }),
+    getSystemHealth: () => this.get<SystemHealth>('/admin/health', { requiresAuth: true }),
 
     // --- Demo Data ---
     generateDemoData: (productsCount?: number, keysPerProduct?: number) =>
-      this.post<{ categories: number; products: number; keys: number }>('/admin/generate-demo', { productsCount, keysPerProduct } as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<{ categories: number; products: number; keys: number }>(
+        '/admin/generate-demo',
+        { productsCount, keysPerProduct } as unknown as Record<string, unknown>,
+        { requiresAuth: true },
+      ),
 
     clearDemoData: (confirmationToken: string) =>
-      this.post<{ message: string }>('/admin/clear-demo', { confirmationToken }, { requiresAuth: true }),
+      this.post<{ message: string }>(
+        '/admin/clear-demo',
+        { confirmationToken },
+        { requiresAuth: true },
+      ),
   }
 
   // --- Categories (Admin CRUD) ---
 
   categoriesAdmin = {
-    list: () =>
-      this.get<Category[]>('/categories'),
+    list: () => this.get<Category[]>('/categories'),
 
     create: (data: CreateCategoryPayload) =>
-      this.post<Category>('/categories', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Category>('/categories', data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     update: (id: string, data: UpdateCategoryPayload) =>
-      this.patch<Category>(`/categories/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<Category>(`/categories/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    delete: (id: string) =>
-      this.delete<void>(`/categories/${id}`, { requiresAuth: true }),
+    delete: (id: string) => this.delete<void>(`/categories/${id}`, { requiresAuth: true }),
   }
 
   // --- Keys (Admin individual management) ---
@@ -725,23 +788,29 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<GameKey[]>(`/keys/product/${productId}${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<GameKey[]>(`/keys/product/${productId}${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
     getKeyStats: (productId: string) =>
       this.get<KeyStats>(`/keys/stats/${productId}`, { requiresAuth: true }),
 
-    getKey: (id: string) =>
-      this.get<GameKey>(`/keys/${id}`, { requiresAuth: true }),
+    getKey: (id: string) => this.get<GameKey>(`/keys/${id}`, { requiresAuth: true }),
 
     updateKey: (id: string, data: { keyData?: string; status?: string }) =>
-      this.patch<GameKey>(`/keys/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<GameKey>(`/keys/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    deleteKey: (id: string) =>
-      this.delete<void>(`/keys/${id}`, { requiresAuth: true }),
+    deleteKey: (id: string) => this.delete<void>(`/keys/${id}`, { requiresAuth: true }),
 
     generateDemoKeys: (productId: string, quantity?: number) =>
-      this.post<{ count: number }>('/keys/generate-demo', { productId, quantity }, { requiresAuth: true }),
+      this.post<{ count: number }>(
+        '/keys/generate-demo',
+        { productId, quantity },
+        { requiresAuth: true },
+      ),
   }
 
   // --- Orders (Extended) ---
@@ -761,14 +830,18 @@ class ApiClientClass {
 
   paymentsAdmin = {
     refundPayment: (id: string, amount?: number) =>
-      this.post<Payment>(`/payments/${id}/refund`, amount ? { amount } : undefined, { requiresAuth: true }),
+      this.post<Payment>(`/payments/${id}/refund`, amount ? { amount } : undefined, {
+        requiresAuth: true,
+      }),
 
     getUserPayments: (userId: string, params?: { page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<Payment[]>(`/payments/user/${userId}${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<Payment[]>(`/payments/user/${userId}${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
   }
 
@@ -780,14 +853,16 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponse<Notification>>(`/notifications${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponse<Notification>>(
+        `/notifications${query ? `?${query}` : ''}`,
+        { requiresAuth: true },
+      )
     },
 
     countUnread: () =>
       this.get<{ count: number }>('/notifications/unread/count', { requiresAuth: true }),
 
-    getById: (id: string) =>
-      this.get<Notification>(`/notifications/${id}`, { requiresAuth: true }),
+    getById: (id: string) => this.get<Notification>(`/notifications/${id}`, { requiresAuth: true }),
 
     markAsRead: (id: string) =>
       this.patch<Notification>(`/notifications/${id}/read`, undefined, { requiresAuth: true }),
@@ -800,24 +875,28 @@ class ApiClientClass {
 
   sellers = {
     create: (data: CreateSellerPayload) =>
-      this.post<Seller>('/admin/sellers', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Seller>('/admin/sellers', data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     list: (params?: { page?: number; limit?: number }) => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponseMeta<Seller>>(`/admin/sellers${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponseMeta<Seller>>(`/admin/sellers${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
-    getById: (id: string) =>
-      this.get<Seller>(`/admin/sellers/${id}`, { requiresAuth: true }),
+    getById: (id: string) => this.get<Seller>(`/admin/sellers/${id}`, { requiresAuth: true }),
 
     update: (id: string, data: UpdateSellerPayload) =>
-      this.patch<Seller>(`/admin/sellers/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<Seller>(`/admin/sellers/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    delete: (id: string) =>
-      this.delete<void>(`/admin/sellers/${id}`, { requiresAuth: true }),
+    delete: (id: string) => this.delete<void>(`/admin/sellers/${id}`, { requiresAuth: true }),
   }
 
   // --- Contact ---
@@ -832,7 +911,10 @@ class ApiClientClass {
   coupons = {
     // Public: validate coupon
     validate: (payload: ValidateCouponPayload) =>
-      this.post<ValidateCouponResponse>('/coupons/validate', payload as unknown as Record<string, unknown>),
+      this.post<ValidateCouponResponse>(
+        '/coupons/validate',
+        payload as unknown as Record<string, unknown>,
+      ),
 
     // Admin CRUD
     list: (params?: { page?: number; limit?: number }) => {
@@ -840,20 +922,24 @@ class ApiClientClass {
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.limit) searchParams.set('limit', String(params.limit))
       const query = searchParams.toString()
-      return this.get<PaginatedResponseMeta<Coupon>>(`/coupons${query ? `?${query}` : ''}`, { requiresAuth: true })
+      return this.get<PaginatedResponseMeta<Coupon>>(`/coupons${query ? `?${query}` : ''}`, {
+        requiresAuth: true,
+      })
     },
 
-    getById: (id: string) =>
-      this.get<Coupon>(`/coupons/${id}`, { requiresAuth: true }),
+    getById: (id: string) => this.get<Coupon>(`/coupons/${id}`, { requiresAuth: true }),
 
     create: (data: CreateCouponPayload) =>
-      this.post<Coupon>('/coupons', data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.post<Coupon>('/coupons', data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
     update: (id: string, data: UpdateCouponPayload) =>
-      this.patch<Coupon>(`/coupons/${id}`, data as unknown as Record<string, unknown>, { requiresAuth: true }),
+      this.patch<Coupon>(`/coupons/${id}`, data as unknown as Record<string, unknown>, {
+        requiresAuth: true,
+      }),
 
-    delete: (id: string) =>
-      this.delete<void>(`/coupons/${id}`, { requiresAuth: true }),
+    delete: (id: string) => this.delete<void>(`/coupons/${id}`, { requiresAuth: true }),
   }
 
   /**
@@ -864,7 +950,7 @@ class ApiClientClass {
   private async requestWithFormData<T>(
     endpoint: string,
     formData: FormData,
-    options: { method?: RequestMethod } = {}
+    options: { method?: RequestMethod } = {},
   ): Promise<ApiResponse<T>> {
     const { method = 'POST' } = options
     const url = `${this.baseURL}${endpoint}`
@@ -910,13 +996,12 @@ class ApiClientClass {
 
     multiple: (files: File[], folder?: string) => {
       const formData = new FormData()
-      files.forEach(f => formData.append('files', f))
+      files.forEach((f) => formData.append('files', f))
       if (folder) formData.append('folder', folder)
       return this.requestWithFormData<UploadResponse[]>('/upload/multiple', formData)
     },
 
-    delete: (key: string) =>
-      this.delete<void>(`/upload/${key}`, { requiresAuth: true }),
+    delete: (key: string) => this.delete<void>(`/upload/${key}`, { requiresAuth: true }),
   }
 }
 

@@ -24,10 +24,16 @@ export function useCart() {
   const syncCartToServer = useCallback(async () => {
     if (!isAuthenticated) return
     try {
-      // Parallel requests — faster than sequential for...of
-      await Promise.all(
-        items.map(item => apiClient.cart.addItem(item.productId, item.quantity))
+      // Use allSettled so one failed item doesn't block the rest
+      const results = await Promise.allSettled(
+        items.map((item) => apiClient.cart.addItem(item.productId, item.quantity)),
       )
+      const failed = results.filter((r) => r.status === 'rejected')
+      if (failed.length > 0) {
+        console.warn(
+          `[useCart] syncCartToServer: ${failed.length}/${items.length} items failed to sync`,
+        )
+      }
       // Fetch the server cart to get the canonical state
       const response = await apiClient.cart.get()
       const serverItems: CartItem[] = response.data.items.map((ci) => ({
@@ -86,16 +92,19 @@ export function useCart() {
 
   const addItem = useCallback(
     async (item: Omit<CartItem, 'quantity'>) => {
+      const existingItem = items.find((i) => i.id === item.id)
       addItemToStore(item)
       if (isAuthenticated) {
         try {
-          await apiClient.cart.addItem(item.productId, 1)
+          // Send the updated quantity (existing + 1) to stay in sync with local state
+          const qty = existingItem ? existingItem.quantity + 1 : 1
+          await apiClient.cart.addItem(item.productId, qty)
         } catch (err) {
           console.error('[useCart] addItem server sync failed:', err)
         }
       }
     },
-    [addItemToStore, isAuthenticated]
+    [addItemToStore, isAuthenticated, items],
   )
 
   const removeItem = useCallback(
@@ -110,7 +119,7 @@ export function useCart() {
         }
       }
     },
-    [removeItemFromStore, isAuthenticated, items]
+    [removeItemFromStore, isAuthenticated, items],
   )
 
   const updateQuantity = useCallback(
@@ -125,7 +134,7 @@ export function useCart() {
         }
       }
     },
-    [updateQuantityInStore, isAuthenticated, items]
+    [updateQuantityInStore, isAuthenticated, items],
   )
 
   const clearCart = useCallback(async () => {

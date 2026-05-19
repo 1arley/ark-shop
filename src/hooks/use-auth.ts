@@ -30,7 +30,8 @@ export function useAuth() {
       if (stored) apiClient.setToken(stored)
     }
     if (!apiClient.getRefreshToken()) {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('auth_refresh_token') : null
+      const stored =
+        typeof window !== 'undefined' ? localStorage.getItem('auth_refresh_token') : null
       if (stored) apiClient.setRefreshToken(stored)
     }
   }, [])
@@ -54,7 +55,7 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser]
+    [setLoading, setUser],
   )
 
   const register = useCallback(
@@ -77,14 +78,19 @@ export function useAuth() {
         setLoading(false)
       }
     },
-    [setLoading, setUser]
+    [setLoading, setUser],
   )
 
-  const logout = useCallback(() => {
-    apiClient.auth.logout().catch((err) => console.error('[useAuth] Logout API call failed:', err))
-    apiClient.clearAuth()
-    logoutStore()
-    useCartStore.getState().clearCart()
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.auth.logout()
+    } catch (err) {
+      console.error('[useAuth] Logout API call failed:', err)
+    } finally {
+      apiClient.clearAuth()
+      logoutStore()
+      useCartStore.getState().clearCart()
+    }
   }, [logoutStore])
 
   return {
