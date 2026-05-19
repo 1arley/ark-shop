@@ -1,9 +1,6 @@
-const requiredEnvVars = [
-  'NEXT_PUBLIC_API_URL',
-  'NEXT_PUBLIC_APP_URL',
-] as const
+const requiredEnvVars = ['NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_APP_URL'] as const
 
-type RequiredEnvVar = typeof requiredEnvVars[number]
+type RequiredEnvVar = (typeof requiredEnvVars)[number]
 
 type EnvConfig = Record<RequiredEnvVar, string> & {
   NEXT_PUBLIC_ENV: string
@@ -13,23 +10,27 @@ type EnvConfig = Record<RequiredEnvVar, string> & {
 }
 
 function validateEnv(): EnvConfig {
-  const missingVars = requiredEnvVars.filter(
-    (envVar) => !process.env[envVar]
-  )
+  // Skip runtime validation in the browser — NEXT_PUBLIC_* variables are
+  // inlined at build time by Next.js. Dynamic access via process.env[var]
+  // does NOT work in the browser bundle (process.env is {} at runtime).
+  // Validation only runs on the server (build time / SSR).
+  const isBrowser = typeof window !== 'undefined'
+
+  const missingVars = isBrowser ? [] : requiredEnvVars.filter((envVar) => !process.env[envVar])
 
   // Fail fast in production — missing env vars are a deployment error
   if (missingVars.length > 0) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
         `Missing required environment variables: ${missingVars.join(', ')}. ` +
-        'The application cannot start without them.'
+          'The application cannot start without them.',
       )
     }
     // In development, warn but allow startup
     console.warn(
       'Missing environment variables:',
       missingVars.join(', '),
-      '- API calls will fail until configured.'
+      '- API calls will fail until configured.',
     )
   }
 
