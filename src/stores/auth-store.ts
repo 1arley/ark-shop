@@ -30,23 +30,28 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false })
+        // Delegate token cleanup to apiClient to avoid cross-module localStorage coupling
         if (typeof window !== 'undefined') {
           localStorage.removeItem(storageKey)
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('auth_refresh_token')
         }
       },
     }),
     {
       name: storageKey,
       storage: createJSONStorage(() => localStorage),
+      // Only persist user data — isAuthenticated is derived from !!user
       partialize: (state) => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setLoading(false)
+      onRehydrateStorage: () => {
+        // Use zustand's setState instead of mutating the state object directly
+        return (state) => {
+          if (state) {
+            useAuthStore.setState({
+              isLoading: false,
+              isAuthenticated: !!state.user,
+            })
+          }
         }
       },
     }

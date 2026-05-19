@@ -32,7 +32,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
-  const [editData, setEditData] = useState<{ name: string; email: string; role: string }>({ name: '', email: '', role: 'USER' })
+  const [editData, setEditData] = useState<{ name: string; email: string; role: 'USER' | 'ADMIN' | 'SUPERADMIN' }>({ name: '', email: '', role: 'USER' })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -143,7 +143,7 @@ export default function AdminUsersPage() {
                             />
                             <select
                               value={editData.role}
-                              onChange={(e) => setEditData(p => ({ ...p, role: e.target.value }))}
+                              onChange={(e) => setEditData(p => ({ ...p, role: e.target.value as 'USER' | 'ADMIN' | 'SUPERADMIN' }))}
                               className='bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white'
                             >
                               <option value='USER'>USER</option>

@@ -247,7 +247,7 @@ export interface AdminUser {
 export interface AdminUpdateUserPayload {
   name?: string
   email?: string
-  role?: string
+  role?: 'USER' | 'ADMIN' | 'SUPERADMIN'
   avatarUrl?: string
 }
 

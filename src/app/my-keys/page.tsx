@@ -64,15 +64,9 @@ export default function MyKeysPage() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  // Auto-load keys for all delivered orders
-  useEffect(() => {
-    orders.forEach(order => {
-      if (order.status === 'DELIVERED' && !order.keys) {
-        handleLoadKeys(order.id)
-      }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders.length > 0])
+  // Load keys on-demand when user clicks "Load Keys" button.
+  // Avoids N+1 problem of auto-loading keys for every delivered order on mount.
+  // Keys are fetched only when explicitly requested by the user.
 
   if (authLoading) {
     return (

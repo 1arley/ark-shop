@@ -24,9 +24,10 @@ export function useCart() {
   const syncCartToServer = useCallback(async () => {
     if (!isAuthenticated) return
     try {
-      for (const item of items) {
-        await apiClient.cart.addItem(item.productId, item.quantity)
-      }
+      // Parallel requests — faster than sequential for...of
+      await Promise.all(
+        items.map(item => apiClient.cart.addItem(item.productId, item.quantity))
+      )
       // Fetch the server cart to get the canonical state
       const response = await apiClient.cart.get()
       const serverItems: CartItem[] = response.data.items.map((ci) => ({

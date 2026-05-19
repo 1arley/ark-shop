@@ -1,7 +1,1 @@
-if npm run lint; then
-  echo "No lint errors found, proceeding with commit."
-  exit 0
-else
-  echo "Lint errors found, aborting commit."
-  exit 1
-fi
+npx lint-staged

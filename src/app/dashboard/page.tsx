@@ -138,10 +138,25 @@ export default function DashboardPage() {
         }
     }
 
-    const copyToClipboard = (key: string, itemId: string) => {
-        navigator.clipboard.writeText(key)
-        setCopiedKey(itemId)
-        setTimeout(() => setCopiedKey(null), CLIPBOARD_FEEDBACK_DURATION)
+    const copyToClipboard = async (key: string, itemId: string) => {
+        try {
+            await navigator.clipboard.writeText(key)
+            setCopiedKey(itemId)
+            setTimeout(() => setCopiedKey(null), CLIPBOARD_FEEDBACK_DURATION)
+        } catch {
+            // Clipboard API may be unavailable in non-secure contexts
+            // Fallback: select the text for manual copy
+            const textarea = document.createElement('textarea')
+            textarea.value = key
+            textarea.style.position = 'fixed'
+            textarea.style.opacity = '0'
+            document.body.appendChild(textarea)
+            textarea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textarea)
+            setCopiedKey(itemId)
+            setTimeout(() => setCopiedKey(null), CLIPBOARD_FEEDBACK_DURATION)
+        }
     }
 
     const handleToggleOrder = async (orderId: string) => {

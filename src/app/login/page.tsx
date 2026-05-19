@@ -146,7 +146,7 @@ function LoginForm() {
                       className='w-4 h-4 rounded bg-neutral-800 border-neutral-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 cursor-pointer'
                     />
                     <label htmlFor='rememberMe' className='text-sm text-neutral-400 cursor-pointer select-none'>
-                      Lembrar de mim (30 dias)
+                      Remember me (30 days)
                     </label>
                   </div>
 

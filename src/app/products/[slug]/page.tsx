@@ -231,7 +231,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         )
     }
 
-    const discount = product.price > 0 ? Math.round(((product.price * 1.2 - product.price) / (product.price * 1.2)) * 100) : 0
+    const discount = 0
 
     return (
         <div className='min-h-screen bg-neutral-950'>

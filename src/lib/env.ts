@@ -17,7 +17,15 @@ function validateEnv(): EnvConfig {
     (envVar) => !process.env[envVar]
   )
 
+  // Fail fast in production — missing env vars are a deployment error
   if (missingVars.length > 0) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}. ` +
+        'The application cannot start without them.'
+      )
+    }
+    // In development, warn but allow startup
     console.warn(
       'Missing environment variables:',
       missingVars.join(', '),
@@ -34,11 +42,14 @@ function validateEnv(): EnvConfig {
     isTest: process.env.NODE_ENV === 'test',
   } as EnvConfig
 
-  console.log('Environment configuration:', {
-    api: config.NEXT_PUBLIC_API_URL ? 'configured' : 'missing',
-    app: config.NEXT_PUBLIC_APP_URL ? 'configured' : 'missing',
-    mode: config.NEXT_PUBLIC_ENV,
-  })
+  // Only log in development to avoid leaking config info in production
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Environment configuration:', {
+      api: config.NEXT_PUBLIC_API_URL ? 'configured' : 'missing',
+      app: config.NEXT_PUBLIC_APP_URL ? 'configured' : 'missing',
+      mode: config.NEXT_PUBLIC_ENV,
+    })
+  }
 
   return config
 }

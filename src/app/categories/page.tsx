@@ -100,10 +100,10 @@ export default function CategoriesPage() {
                         {categories.slice(0, 5).map((category) => (
                             <Button
                                 key={category.id}
-                                variant={selectedCategory === category.name ? 'default' : 'outline'}
+                                variant={selectedCategory === category.id ? 'default' : 'outline'}
                                 onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
                                 className={
-                                    selectedCategory === category.name
+                                    selectedCategory === category.id
                                         ? 'bg-indigo-600'
                                         : 'border-slate-600 hover:bg-slate-800'
                                 }

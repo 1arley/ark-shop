@@ -53,7 +53,7 @@ export const useCartStore = create<CartState>()(
       },
 
       updateQuantity: (id, quantity) => {
-        if (quantity <= 0) {
+        if (!Number.isInteger(quantity) || quantity <= 0) {
           get().removeItem(id)
           return
         }

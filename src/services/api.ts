@@ -221,7 +221,9 @@ class ApiClientClass {
     if (timeSinceActivity > this.INACTIVITY_TIMEOUT) {
       // Only auto-logout if NOT rememberMe
       if (!this.getRememberMe()) {
-        console.log('[ApiClient] User inactive for 10 minutes, logging out')
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[ApiClient] User inactive for 10 minutes, logging out')
+        }
         this.clearAuth()
         if (typeof window !== 'undefined') {
           window.location.href = '/login?reason=inactivity'
@@ -232,7 +234,9 @@ class ApiClientClass {
 
     // If token expires within 5 minutes, refresh it
     if (timeUntilExpiry < this.REFRESH_BEFORE_EXPIRY && timeUntilExpiry > 0) {
-      console.log('[ApiClient] Token expiring soon, refreshing...')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[ApiClient] Token expiring soon, refreshing...')
+      }
       try {
         await this.tryRefreshToken()
       } catch {
@@ -470,17 +474,17 @@ class ApiClientClass {
       this.get<AuthUser>('/auth/me', { requiresAuth: true }),
 
     refresh: async (refreshToken: string) => {
-      // Backend expects refresh token in Authorization Bearer header, not in body
-      const response = await fetch(`${apiClient['baseURL']}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
-        },
-      })
-      const data = await response.json().catch(() => ({}))
-      return { data, status: response.status }
+      // Reuse the internal refresh queue to avoid duplicate logic
+      this.setRefreshToken(refreshToken)
+      try {
+        const newToken = await this.tryRefreshToken()
+        return { data: { access_token: newToken }, status: 200 }
+      } catch (error) {
+        return {
+          data: { message: error instanceof Error ? error.message : 'Refresh failed' },
+          status: 401,
+        }
+      }
     },
 
     logout: () =>
@@ -852,45 +856,63 @@ class ApiClientClass {
       this.delete<void>(`/coupons/${id}`, { requiresAuth: true }),
   }
 
+  /**
+   * Perform a request with FormData (file uploads).
+   * Shares token handling, error formatting, and response wrapping with `request()`.
+   * Does NOT set Content-Type — the browser sets multipart/form-data with the correct boundary.
+   */
+  private async requestWithFormData<T>(
+    endpoint: string,
+    formData: FormData,
+    options: { method?: RequestMethod } = {}
+  ): Promise<ApiResponse<T>> {
+    const { method = 'POST' } = options
+    const url = `${this.baseURL}${endpoint}`
+
+    const headers: Record<string, string> = {}
+    const token = this.getToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      credentials: 'include',
+      body: formData,
+    })
+
+    const responseData = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      const error: ApiError = {
+        name: 'ApiError',
+        message: responseData.message || `HTTP ${response.status}`,
+        status: response.status,
+        code: responseData.code || 'UNKNOWN_ERROR',
+        details: responseData.details,
+      }
+      throw error
+    }
+
+    return { data: responseData as T, status: response.status }
+  }
+
   // --- Upload ---
 
   upload = {
-    single: async (file: File, folder?: string) => {
+    single: (file: File, folder?: string) => {
       const formData = new FormData()
       formData.append('file', file)
       if (folder) formData.append('folder', folder)
-
-      const token = this.getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
-      const response = await fetch(`${this.baseURL}/upload`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      })
-      const data = await response.json()
-      if (!response.ok) throw { name: 'ApiError', message: data.message || `HTTP ${response.status}`, status: response.status, code: data.code || 'UPLOAD_ERROR' }
-      return { data, status: response.status } as ApiResponse<UploadResponse>
+      return this.requestWithFormData<UploadResponse>('/upload', formData)
     },
 
-    multiple: async (files: File[], folder?: string) => {
+    multiple: (files: File[], folder?: string) => {
       const formData = new FormData()
       files.forEach(f => formData.append('files', f))
       if (folder) formData.append('folder', folder)
-
-      const token = this.getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
-      const response = await fetch(`${this.baseURL}/upload/multiple`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      })
-      const data = await response.json()
-      if (!response.ok) throw { name: 'ApiError', message: data.message || `HTTP ${response.status}`, status: response.status, code: data.code || 'UPLOAD_ERROR' }
-      return { data, status: response.status } as ApiResponse<UploadResponse[]>
+      return this.requestWithFormData<UploadResponse[]>('/upload/multiple', formData)
     },
 
     delete: (key: string) =>
